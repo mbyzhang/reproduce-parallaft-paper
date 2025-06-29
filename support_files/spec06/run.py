@@ -155,6 +155,12 @@ def apply_run_mode(mode: str, runcpu_args: List[str], env: Dict[str, str]):
             label_suffix="",
             parallaft_xargs=xargs_fixed_interval_slicing,
         )
+    elif mode == "parallaft_syscallspec":
+        runcpu_args += get_defs(
+            verb="parallaft",
+            label_suffix="",
+            parallaft_xargs=xargs_fixed_interval_slicing + " --syscall-speculation true",
+        )
     elif mode == "parallaft_perfcounters":
         runcpu_args += get_defs(
             verb="parallaft", label_suffix="", parallaft_xargs=xargs_sample_mem_no_rt
@@ -244,6 +250,7 @@ EXPERIMENT_OPTION_LIST: List[OptionField] = [
             [
                 "base",
                 "parallaft",
+                "parallaft_syscallspec",
                 "parallaft_perfcounters",
                 "parallaft_nofork",
                 "parallaft_nomemcheck",
@@ -497,9 +504,14 @@ def main():
 
     for option in EXPERIMENT_OPTION_LIST:
         if option.type == bool:
-            argparser.add_argument(
-                f"--{option.name}", default=option.default, action="store_true"
-            )
+            if option.default:
+                argparser.add_argument(
+                    f"--no-{option.name}", dest=option.name, default=option.default, action="store_false"
+                )
+            else:
+                argparser.add_argument(
+                    f"--{option.name}", default=option.default, action="store_true"
+                )
         else:
             argparser.add_argument(
                 f"--{option.name}",

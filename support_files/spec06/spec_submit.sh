@@ -255,7 +255,7 @@ run)
     taskset -c "$BIG_CORES_SET_1" "$@"
   ;;
 parallaft)
-  if [ -z "$RELEVAL_PARALLAFT_NO_LOG" ]; then
+  if [ "$RELEVAL_PARALLAFT_NO_LOG" -ne 1 ]; then
     export RUST_LOG=info
   fi
 

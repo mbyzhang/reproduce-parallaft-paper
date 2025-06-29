@@ -192,6 +192,7 @@ FIELD_LIST = [
             lambda x: x,
         )
     ),
+    (f_sysspec_main_syscall_waiting_time := Field("syscall_speculator.main_syscall_waiting_time", float)),
 ]
 
 FIELD_DICT = {f.name: f for f in FIELD_LIST}
