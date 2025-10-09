@@ -135,94 +135,65 @@ class OptionField(NamedTuple, Generic[T]):
                 f"Unexpected value {value} for option {self.name}, expecting one of {self.choices}"
             )
 
+def get_defs(**kwargs):
+    args = []
+    for k, v in kwargs.items():
+        if isinstance(v, list):
+            v = " ".join(v)
+        args += ["--define", f"{k}={v}"]
+    return args
+
+xargs_fixed_interval_slicing = "--slicer fixed-interval -e true"
+xargs_tracker_slicing = "--slicer tracker -e true"
+xargs_syscall_speculation = "--syscall-speculation true"
+xargs_speculative_reads = "--speculative-reads true"
+xargs_sample_mem_no_rt = "--sample-memory-usage true"
+xargs_sample_mem = xargs_sample_mem_no_rt + " --memory-sample-includes-rt true"
+
+RUN_MODES = {
+    "base": [],
+    "trace_dirty_pages": get_defs(verb="trace-dirty-pages"),
+    "sample_ipc": get_defs(verb="sample-ipc"),
+    "parallaft": get_defs(verb="parallaft", label_suffix="", parallaft_xargs=xargs_fixed_interval_slicing),
+    "parallaft_syscallspec": get_defs(verb="parallaft", label_suffix="", parallaft_xargs=[
+        xargs_fixed_interval_slicing,
+        xargs_syscall_speculation,
+    ]),
+    "parallaft_perfcounters": get_defs(verb="parallaft", label_suffix="", parallaft_xargs=xargs_sample_mem_no_rt),
+    "parallaft_nofork": get_defs(verb="parallaft", label_suffix="-nofork", parallaft_xargs=["--dont-fork true", xargs_fixed_interval_slicing]),
+    "parallaft_nomemcheck": get_defs(verb="parallaft", label_suffix="-nomemcheck", parallaft_xargs=["--no-mem-check true", xargs_fixed_interval_slicing]),
+    "parallaft_samplemem": get_defs(verb="parallaft", label_suffix="-samplemem", parallaft_xargs=[xargs_sample_mem, xargs_fixed_interval_slicing]),
+    "parallaft_nofork_samplemem": get_defs(verb="parallaft", label_suffix="-nofork-samplemem", parallaft_xargs=["--dont-fork true", xargs_sample_mem, xargs_fixed_interval_slicing]),
+    "parallaft_raft": get_defs(verb="parallaft", label_suffix="-raft", parallaft_xargs=[
+        "--slicer entire-program",
+        "--no-state-cmp true",
+        "--dirty-page-tracker none",
+        xargs_sample_mem_no_rt,
+    ]),
+    "parallaft_dynslicing": get_defs(verb="parallaft", label_suffix="-dynslicing", parallaft_xargs="--slicer dynamic -e true"),
+    "parallaft_dyncpufreq": get_defs(verb="parallaft", label_suffix="-dyncpufreq", parallaft_xargs=[
+        "--cpu-freq-scaler dynamic",
+        xargs_fixed_interval_slicing,
+        xargs_sample_mem,
+    ]),
+    "parallaft_dyn2": get_defs(verb="parallaft", label_suffix="-dyn2", parallaft_xargs="--slicer dynamic -e true --cpu-freq-scaler dynamic"),
+    "parallaft_tracker_baseline": get_defs(verb="parallaft", label_suffix="-tracker", parallaft_xargs=xargs_tracker_slicing),
+    "parallaft_tracker_syscallspec": get_defs(verb="parallaft", label_suffix="-tracker-syscallspec", parallaft_xargs=[
+        xargs_tracker_slicing,
+        xargs_syscall_speculation,
+    ]),
+    "parallaft_tracker_specread": get_defs(verb="parallaft", label_suffix="-tracker-specread", parallaft_xargs=[
+        xargs_tracker_slicing,
+        xargs_syscall_speculation,
+        xargs_speculative_reads,
+    ]),
+}
 
 def apply_run_mode(mode: str, runcpu_args: List[str], env: Dict[str, str]):
-    def get_defs(**kwargs):
-        args = []
-        for k, v in kwargs.items():
-            args += ["--define", f"{k}={v}"]
-        return args
-
-    xargs_fixed_interval_slicing = "--slicer fixed-interval -e true"
-    xargs_sample_mem_no_rt = "--sample-memory-usage true"
-    xargs_sample_mem = xargs_sample_mem_no_rt + " --memory-sample-includes-rt true"
-
-    if mode == "base":
-        pass
-    elif mode == "parallaft":
-        runcpu_args += get_defs(
-            verb="parallaft",
-            label_suffix="",
-            parallaft_xargs=xargs_fixed_interval_slicing,
-        )
-    elif mode == "parallaft_syscallspec":
-        runcpu_args += get_defs(
-            verb="parallaft",
-            label_suffix="",
-            parallaft_xargs=xargs_fixed_interval_slicing + " --syscall-speculation true",
-        )
-    elif mode == "parallaft_perfcounters":
-        runcpu_args += get_defs(
-            verb="parallaft", label_suffix="", parallaft_xargs=xargs_sample_mem_no_rt
-        )
-    elif mode == "parallaft_nofork":
-        runcpu_args += get_defs(
-            verb="parallaft",
-            label_suffix="-nofork",
-            parallaft_xargs="--dont-fork true " + xargs_fixed_interval_slicing,
-        )
-    elif mode == "parallaft_nomemcheck":
-        runcpu_args += get_defs(
-            verb="parallaft",
-            label_suffix="-nomemcheck",
-            parallaft_xargs="--no-mem-check true " + xargs_fixed_interval_slicing,
-        )
-    elif mode == "parallaft_samplemem":
-        runcpu_args += get_defs(
-            verb="parallaft",
-            label_suffix="-samplemem",
-            parallaft_xargs=xargs_sample_mem + " " + xargs_fixed_interval_slicing,
-        )
-    elif mode == "parallaft_nofork_samplemem":
-        runcpu_args += get_defs(
-            verb="parallaft",
-            label_suffix="-nofork-samplemem",
-            parallaft_xargs="--dont-fork true "
-            + xargs_sample_mem
-            + " "
-            + xargs_fixed_interval_slicing,
-        )
-    elif mode == "parallaft_raft":
-        runcpu_args += get_defs(
-            verb="parallaft",
-            label_suffix="-raft",
-            parallaft_xargs="--slicer entire-program --no-state-cmp true --dirty-page-tracker none "
-            + xargs_sample_mem_no_rt,
-        )
-    elif mode == "parallaft_dynslicing":
-        runcpu_args += get_defs(
-            verb="parallaft",
-            label_suffix="-dynslicing",
-            parallaft_xargs="--slicer dynamic -e true",
-        )
-    elif mode == "parallaft_dyncpufreq":
-        runcpu_args += get_defs(
-            verb="parallaft",
-            label_suffix="-dyncpufreq",
-            parallaft_xargs="--cpu-freq-scaler dynamic "
-            + xargs_fixed_interval_slicing
-            + " "
-            + xargs_sample_mem,
-        )
-    elif mode == "parallaft_dyn2":
-        runcpu_args += get_defs(
-            verb="parallaft",
-            label_suffix="-dyn2",
-            parallaft_xargs="--slicer dynamic -e true --cpu-freq-scaler dynamic",
-        )
-    else:
+    try:
+        runcpu_args += RUN_MODES[mode]
+    except KeyError:
         raise ValueError("Unsupported mode")
-
 
 def apply_env(env_name: str, env_formatter: Callable[[T], str] = str) -> Applier:
     def inner(
@@ -247,20 +218,7 @@ EXPERIMENT_OPTION_LIST: List[OptionField] = [
             "mode",
             str,
             "base",
-            [
-                "base",
-                "parallaft",
-                "parallaft_syscallspec",
-                "parallaft_perfcounters",
-                "parallaft_nofork",
-                "parallaft_nomemcheck",
-                "parallaft_samplemem",
-                "parallaft_nofork_samplemem",
-                "parallaft_raft",
-                "parallaft_dynslicing",
-                "parallaft_dyncpufreq",
-                "parallaft_dyn2",
-            ],
+            list(RUN_MODES.keys()),
             apply_run_mode,
         )
     ),
@@ -268,8 +226,8 @@ EXPERIMENT_OPTION_LIST: List[OptionField] = [
         OPT_PARALLAFT_CORE_ALLOC := OptionField(
             "parallaft_core_alloc",
             str,
-            "all-big",
-            ["all-big", "all-small", "heterogeneous", "inverted-heterogeneous"],
+            "hetero",
+            ["all-big", "hetero"],
             apply_env("RELEVAL_PARALLAFT_CORE_ALLOC"),
         )
     ),
@@ -339,7 +297,7 @@ class Metadata:
     def cleanup(self):
         mode = self.config[OPT_MODE.name]
 
-        if mode == "base":
+        if not mode.startswith("parallaft"):
             options_to_delete = [
                 OPT_PARALLAFT_CHECKPOINT_PERIOD,
                 OPT_PARALLAFT_CORE_ALLOC,

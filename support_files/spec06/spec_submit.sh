@@ -25,8 +25,11 @@ ACTION="$1"
 shift
 
 function usage {
-  echo "usage: $0 {strace|sdt|run|parallaft} [PARALLAFT_XARGS...] -- PROGRAM"
+  echo "usage: $0 {strace|trace-dirty-pages|sample-ipc|run|parallaft} [PARALLAFT_XARGS...] -- PROGRAM"
 }
+
+PARALLAFT_BIN=parallaft
+PARALLAFT_UTILS_BIN=parallaft-utils
 
 PARALLAFT_XARGS=()
 PARALLAFT_COMMON_ARGS=()
@@ -55,13 +58,6 @@ function normalize_cmdline() {
   echo -n "$exe" "${@:2}"
 }
 
-function ensure_small_cores_present() {
-  if [ -z "$SMALL_CORES" ]; then
-    echo "Error: small cores are not present on your CPU"
-    exit 1
-  fi
-}
-
 function set_intel_noturbo() {
   if [ "$1" -ne 0 -a "$1" -ne 1 ]; then
     echo "Error: invalid Intel noturbo value"
@@ -87,95 +83,15 @@ function parallaft_enable_hwmon() {
 }
 
 function get_core_config() {
-  if [ $(uname -m) = "x86_64" ]; then
-    local lscpu_result="$(lscpu)"
-    local cpu_vendor=$(grep '^Vendor ID:' <<<"$lscpu_result" | awk '{print $NF}')
-    local cpu_family=$(grep '^\s*CPU family:' <<<"$lscpu_result" | awk '{print $NF}')
-    local cpu_model=$(grep '^\s*Model:' <<<"$lscpu_result" | awk '{print $NF}')
-
-    BIG_CORES_SET_1="2"
-    BIG_CORES_SET_2="4,6,8,10"
-    SMALL_CORES=""
-
-    if [ "$cpu_vendor" = "GenuineIntel" -a "$cpu_family" = "6" -a "$cpu_model" = "151" ]; then
-      # On our Intel i7-12700 machine, CPU 16-19 are small cores
-      SMALL_CORES="16,17,18,19"
-      PARALLAFT_COMMON_ARGS+=(--max-nr-live-segments 5)
-    elif [ "$cpu_vendor" = "GenuineIntel" -a "$cpu_family" = "6" -a "$cpu_model" = "183" ]; then
-      # On our Intel i7-14700 machine, CPU 16-27 are small cores
-      SMALL_CORES="16,17,18,19,20,21,22,23,24,25,26,27"
-      PARALLAFT_COMMON_ARGS+=(--max-nr-live-segments 13)
-    else
-      PARALLAFT_COMMON_ARGS+=(--max-nr-live-segments 5)
-    fi
-  else
-    BIG_CORES_SET_1="4"
-    BIG_CORES_SET_2="5"
-    BIG_CORES_SET_ALL="4,5,6,7"
-    SMALL_CORES="0,1,2,3"
-    PARALLAFT_COMMON_ARGS+=(--max-nr-live-segments 7)
-  fi
+  BIG_CPU_SET=`"$PARALLAFT_UTILS_BIN" cpu-tiers | head -n 1 | grep -oP --color=never '(?<=CPUs: )[\\d-]+'`
 }
 
-function parallaft_set_cpu_sets() {
-  local cpu_vendor=$(lscpu | grep '^Vendor ID:' | awk '{print $NF}')
-
-  local core_alloc="${RELEVAL_PARALLAFT_CORE_ALLOC:-all_big}"
-
-  case "$core_alloc" in
-  all-big)
-    MAIN_CPU_SET="$BIG_CORES_SET_1"
-    CHECKER_CPU_SET="$BIG_CORES_SET_2"
-    SHELL_CPU_SET="$BIG_CORES_SET_2"
-    ;;
-  all-small)
-    ensure_small_cores_present
-    MAIN_CPU_SET="$SMALL_CORES"
-    CHECKER_CPU_SET="$SMALL_CORES"
-    SHELL_CPU_SET="$SMALL_CORES"
-    ;;
-  heterogeneous)
-    ensure_small_cores_present
-    MAIN_CPU_SET="$BIG_CORES_SET_1"
-    CHECKER_CPU_SET="$SMALL_CORES"
-    CHECKER_EMERG_CPU_SET="$BIG_CORES_SET_2"
-    CHECKER_BOOSTER_CPU_SET="$BIG_CORES_SET_ALL"
-    SHELL_CPU_SET="$SMALL_CORES"
-
-    if [ "$cpu_vendor" = "GenuineIntel" ]; then
-      PARALLAFT_COMMON_ARGS+=(--enable-intel-hybrid-workaround true)
-    fi
-    ;;
-  inverted-heterogeneous)
-    # swap the role of big and small cores
-    ensure_small_cores_present
-    MAIN_CPU_SET="$SMALL_CORES"
-    CHECKER_CPU_SET="$BIG_CORES_SET_2"
-    SHELL_CPU_SET="$BIG_CORES_SET_2"
-
-    if [ "$cpu_vendor" = "GenuineIntel" ]; then
-      PARALLAFT_COMMON_ARGS+=(--enable-intel-hybrid-workaround true)
-    fi
-    ;;
-  *)
-    echo "Error: unsupported \$RELEVAL_PARALLAFT_CORE_ALLOC"
-    exit 1
-    ;;
-  esac
+function parallaft_set_cpu_alloc() {
+  local core_alloc="${RELEVAL_PARALLAFT_CORE_ALLOC:-all-big}"
 
   PARALLAFT_COMMON_ARGS+=(
-    --main-cpu-set "$MAIN_CPU_SET"
-    --checker-cpu-set "$CHECKER_CPU_SET"
-    --shell-cpu-set "$SHELL_CPU_SET"
+    --cpu-alloc "$core_alloc"
   )
-
-  if [ -n "$CHECKER_EMERG_CPU_SET" ]; then
-    PARALLAFT_COMMON_ARGS+=(--checker-emerg-cpu-set "$CHECKER_EMERG_CPU_SET")
-  fi
-
-  if [ -n "$CHECKER_BOOSTER_CPU_SET" ]; then
-    PARALLAFT_COMMON_ARGS+=(--checker-booster-cpu-set "$CHECKER_BOOSTER_CPU_SET")
-  fi
 }
 
 function parallaft_set_checkpoint_period() {
@@ -241,8 +157,13 @@ strace)
     -o "$RESULT_PREFIX.stats.txt" \
     strace -f -tt -o "$LOG_PREFIX.strace.log" -- "$@"
   ;;
-sdt)
-  exec soft-dirty-tracer -o "$LOG_PREFIX.mpk" -- "$@"
+trace-dirty-pages)
+  get_core_config
+  exec "$PARALLAFT_UTILS_BIN" trace-dirty-pages -c "$BIG_CPU_SET" -o "$LOG_PREFIX.dp.mpk" -z -s -- "$@"
+  ;;
+sample-ipc)
+  get_core_config
+  exec "$PARALLAFT_UTILS_BIN" sample-ipc -c 16 -o "$LOG_PREFIX.ipc.mpk" -- "$@"
   ;;
 run)
   env >"$LOG_PREFIX.env.txt"
@@ -252,15 +173,14 @@ run)
   /bin/time \
     -f $'timing.main_user_time=%U\ntiming.main_sys_time=%S\ntiming.main_wall_time=%e\ntiming.exit_status=%x\n' \
     -o "$RESULT_PREFIX.stats.txt" \
-    taskset -c "$BIG_CORES_SET_1" "$@"
+    taskset -c "$BIG_CPU_SET" "$@"
   ;;
 parallaft)
   if [ "$RELEVAL_PARALLAFT_NO_LOG" -ne 1 ]; then
     export RUST_LOG=info
   fi
 
-  get_core_config
-  parallaft_set_cpu_sets
+  parallaft_set_cpu_alloc
   parallaft_set_checkpoint_period
   parallaft_enable_perf_counters
   parallaft_enable_core_dump
@@ -272,7 +192,7 @@ parallaft)
   )
 
   PARALLAFT_EXEC=(
-    parallaft
+    "$PARALLAFT_BIN"
     "${PARALLAFT_COMMON_ARGS[@]}"
     "${PARALLAFT_XARGS[@]}"
     --

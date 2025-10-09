@@ -72,7 +72,6 @@ for experiment in "${EXPERIMENTS[@]}"; do
     REL_RUN_EXTRA_ARGS=()
     if [ "$experiment" = "parallaft" -o "$experiment" = "parallaft_dyncpufreq" -o "$experiment" = "parallaft_syscallspec" ]; then
         REL_RUN_EXTRA_ARGS=(
-            --parallaft_core_alloc heterogeneous
             --parallaft_checkpoint_period $PARALLAFT_CHECKPOINT_PERIOD
             --no-parallaft_no_log
         )
