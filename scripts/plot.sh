@@ -10,7 +10,7 @@ RUN_DIR="$BASE/spec06/releval/run"
 PLOTS_DIR="$BASE/plots"
 
 function find_one_parallaft_result() {
-    local dirs=("$RUN_DIR"/parallaft_*_heterogeneous_parallaft-unknown)
+    local dirs=("$RUN_DIR"/parallaft_*_hetero_parallaft-unknown)
     if [ ${#dirs[@]} -ne 1 ]; then
         echo "Expected exactly one parallaft result, but found ${#dirs[@]}:" >&2
         exit 1
