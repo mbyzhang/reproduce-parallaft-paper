@@ -83,7 +83,7 @@ function parallaft_enable_hwmon() {
 }
 
 function get_core_config() {
-  BIG_CPU_SET=`"$PARALLAFT_UTILS_BIN" cpu-tiers | head -n 1 | grep -oP --color=never '(?<=CPUs: )[\\d-]+'`
+  BIG_CPU_SET=`"$PARALLAFT_UTILS_BIN" cpu-tiers | head -n 1 | grep -oP --color=never '(?<=CPUs: )[\\d]+'`
 }
 
 function parallaft_set_cpu_alloc() {
