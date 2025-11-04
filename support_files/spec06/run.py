@@ -147,6 +147,7 @@ xargs_fixed_interval_slicing = "--slicer fixed-interval -e true"
 xargs_tracker_slicing = "--slicer tracker -e true"
 xargs_syscall_speculation = "--syscall-speculation true"
 xargs_speculative_reads = "--speculative-reads true"
+xargs_double_spec = "--double-speculation true"
 xargs_sample_mem_no_rt = "--sample-memory-usage true"
 xargs_sample_mem = xargs_sample_mem_no_rt + " --memory-sample-includes-rt true"
 
@@ -186,6 +187,12 @@ RUN_MODES = {
         xargs_tracker_slicing,
         xargs_syscall_speculation,
         xargs_speculative_reads,
+    ]),
+    "parallaft_tracker_specread_doublespec": get_defs(verb="parallaft", label_suffix="-tracker-specread-doublespec", parallaft_xargs=[
+        xargs_tracker_slicing,
+        xargs_syscall_speculation,
+        xargs_speculative_reads,
+        xargs_double_spec,
     ]),
 }
 
