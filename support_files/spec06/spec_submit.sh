@@ -87,7 +87,7 @@ function get_core_config() {
 }
 
 function parallaft_set_cpu_alloc() {
-  local core_alloc="${RELEVAL_PARALLAFT_CORE_ALLOC:-all-big}"
+  local core_alloc="${RELEVAL_PARALLAFT_CORE_ALLOC:-hetero}"
 
   PARALLAFT_COMMON_ARGS+=(
     --cpu-alloc "$core_alloc"
