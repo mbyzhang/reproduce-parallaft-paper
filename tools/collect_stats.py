@@ -230,6 +230,24 @@ EXPERIMENT_TYPE_LIST = [
     ExperimentType.RAFT,
 ]
 
+class Statistic(Enum):
+    SINGLE = "single"
+    AVERAGE = "average"
+    MAX = "max"
+    MIN = "min"
+    
+    def calculate(self, values):
+        if self == Statistic.SINGLE:
+            assert len(values) == 1, f"Expected a single value, got {len(values)}"
+            return values[0]
+        elif self == Statistic.AVERAGE:
+            return sum(values) / len(values)
+        elif self == Statistic.MAX:
+            return max(values)
+        elif self == Statistic.MIN:
+            return min(values)
+        else:
+            raise ValueError(f"Unknown statistic: {self}")
 
 class CrossExperimentDerivedField(NamedTuple, Generic[T]):
     name: str
@@ -239,67 +257,67 @@ class CrossExperimentDerivedField(NamedTuple, Generic[T]):
 CROSS_EXP_DERIVED_FIELD_LIST = [
     f_parallaft_overhead_perf := CrossExperimentDerivedField(
         "parallaft.overhead.perf",
-        lambda stats: (
-            stats[(ExperimentType.PARALLAFT, f_all_wall_time.name)]
-            - stats[(ExperimentType.BASE, f_main_wall_time.name)]
+        lambda stats, stat_ty: (
+            stats[(ExperimentType.PARALLAFT, f_all_wall_time.name, stat_ty)]
+            - stats[(ExperimentType.BASE, f_main_wall_time.name, Statistic.AVERAGE)]
         )
-        / stats[(ExperimentType.BASE, f_main_wall_time.name)],
+        / stats[(ExperimentType.BASE, f_main_wall_time.name, Statistic.AVERAGE)],
     ),
     f_parallaft_overhead_perf_runtime_work := CrossExperimentDerivedField(
         "parallaft.overhead.perf.runtime_work",
-        lambda stats: (
-            stats[(ExperimentType.PARALLAFT, f_main_wall_time.name)]
-            - stats[(ExperimentType.PARALLAFT, f_main_cpu_time.name)]
+        lambda stats, stat_ty: (
+            stats[(ExperimentType.PARALLAFT, f_main_wall_time.name, stat_ty)]
+            - stats[(ExperimentType.PARALLAFT, f_main_cpu_time.name, stat_ty)]
         )
-        / stats[(ExperimentType.BASE, f_main_wall_time.name)],
+        / stats[(ExperimentType.BASE, f_main_wall_time.name, Statistic.AVERAGE)],
     ),
     f_parallaft_overhead_perf_last_checker_sync := CrossExperimentDerivedField(
         "parallaft.overhead.perf.last_checker_sync",
-        lambda stats: (
-            stats[(ExperimentType.PARALLAFT, f_all_wall_time.name)]
-            - stats[(ExperimentType.PARALLAFT, f_main_wall_time.name)]
+        lambda stats, stat_ty: (
+            stats[(ExperimentType.PARALLAFT, f_all_wall_time.name, stat_ty)]
+            - stats[(ExperimentType.PARALLAFT, f_main_wall_time.name, stat_ty)]
         )
-        / stats[(ExperimentType.BASE, f_main_wall_time.name)],
+        / stats[(ExperimentType.BASE, f_main_wall_time.name, Statistic.AVERAGE)],
     ),
     f_parallaft_overhead_perf_resource_contention := CrossExperimentDerivedField(
         "parallaft.overhead.perf.resource_contention",
-        lambda stats: (
-            stats[(ExperimentType.PARALLAFT, f_main_user_time.name)]
-            - stats[(ExperimentType.BASE, f_main_user_time.name)]
+        lambda stats, stat_ty: (
+            stats[(ExperimentType.PARALLAFT, f_main_user_time.name, stat_ty)]
+            - stats[(ExperimentType.BASE, f_main_user_time.name, Statistic.AVERAGE)]
         )
-        / stats[(ExperimentType.BASE, f_main_wall_time.name)],
+        / stats[(ExperimentType.BASE, f_main_wall_time.name, Statistic.AVERAGE)],
     ),
     f_parallaft_overhead_perf_fork_and_cow := CrossExperimentDerivedField(
         "parallaft.overhead.perf.fork_and_cow",
-        lambda stats: (
-            stats[(ExperimentType.PARALLAFT, f_main_sys_time.name)]
-            - stats[(ExperimentType.BASE, f_main_sys_time.name)]
+        lambda stats, stat_ty: (
+            stats[(ExperimentType.PARALLAFT, f_main_sys_time.name, stat_ty)]
+            - stats[(ExperimentType.BASE, f_main_sys_time.name, Statistic.AVERAGE)]
         )
-        / stats[(ExperimentType.BASE, f_main_wall_time.name)],
+        / stats[(ExperimentType.BASE, f_main_wall_time.name, Statistic.AVERAGE)],
     ),
     f_parallaft_overhead_energy := CrossExperimentDerivedField(
         "parallaft.overhead.energy",
-        lambda stats: (
-            stats[(ExperimentType.PARALLAFT, f_hwmon_all_energy.name)]
-            - stats[(ExperimentType.BASE_WITH_PERF_COUNTERS, f_hwmon_all_energy.name)]
+        lambda stats, stat_ty: (
+            stats[(ExperimentType.PARALLAFT, f_hwmon_all_energy.name, stat_ty)]
+            - stats[(ExperimentType.BASE_WITH_PERF_COUNTERS, f_hwmon_all_energy.name, Statistic.AVERAGE)]
         )
-        / stats[(ExperimentType.BASE_WITH_PERF_COUNTERS, f_hwmon_all_energy.name)],
+        / stats[(ExperimentType.BASE_WITH_PERF_COUNTERS, f_hwmon_all_energy.name, Statistic.AVERAGE)],
     ),
     f_raft_overhead_perf := CrossExperimentDerivedField(
         "raft.overhead.perf",
-        lambda stats: (
-            stats[(ExperimentType.RAFT, f_all_wall_time.name)]
-            - stats[(ExperimentType.BASE, f_main_wall_time.name)]
+        lambda stats, stat_ty: (
+            stats[(ExperimentType.RAFT, f_all_wall_time.name, stat_ty)]
+            - stats[(ExperimentType.BASE, f_main_wall_time.name, Statistic.AVERAGE)]
         )
-        / stats[(ExperimentType.BASE, f_main_wall_time.name)],
+        / stats[(ExperimentType.BASE, f_main_wall_time.name, Statistic.AVERAGE)],
     ),
     f_raft_overhead_energy := CrossExperimentDerivedField(
         "raft.overhead.energy",
-        lambda stats: (
-            stats[(ExperimentType.RAFT, f_hwmon_all_energy.name)]
-            - stats[(ExperimentType.BASE_WITH_PERF_COUNTERS, f_hwmon_all_energy.name)]
+        lambda stats, stat_ty: (
+            stats[(ExperimentType.RAFT, f_hwmon_all_energy.name, stat_ty)]
+            - stats[(ExperimentType.BASE_WITH_PERF_COUNTERS, f_hwmon_all_energy.name, Statistic.AVERAGE)]
         )
-        / stats[(ExperimentType.BASE_WITH_PERF_COUNTERS, f_hwmon_all_energy.name)],
+        / stats[(ExperimentType.BASE_WITH_PERF_COUNTERS, f_hwmon_all_energy.name, Statistic.AVERAGE)],
     ),
 ]
 
@@ -361,38 +379,40 @@ def calculate_derived_fields(stats: OrderedDict[str, Any]):
 
 
 def calculate_cross_exp_derived_fields(
-    exp_stats: OrderedDict[(ExperimentType, str), Any]
+    exp_stats: OrderedDict[(ExperimentType, str, Union[int, Statistic]), Any],
+    stat_ty: Statistic
 ):
     for f in CROSS_EXP_DERIVED_FIELD_LIST:
         try:
-            exp_stats[(ExperimentType.CROSS_EXP_DERIVED, f.name)] = f.getter(exp_stats)
+            exp_stats[(ExperimentType.CROSS_EXP_DERIVED, f.name, stat_ty)] = f.getter(exp_stats, stat_ty)
         except KeyError:
             pass
 
 
-def with_experiment_type(
-    exp_type: ExperimentType, stats: OrderedDict[str, Any]
+def with_experiment_id_and_type(
+    i: int, exp_type: ExperimentType, stats: OrderedDict[str, Any]
 ) -> OrderedDict[(ExperimentType, str), Any]:
-    return OrderedDict([((exp_type, k), v) for k, v in stats.items()])
+    return OrderedDict([((exp_type, k, i), v) for k, v in stats.items()])
 
 
 FIELD_GROUPS = {
     "performance_overhead_parallaft_vs_raft": [
-        (ExperimentType.CROSS_EXP_DERIVED, f_parallaft_overhead_perf),
-        (ExperimentType.CROSS_EXP_DERIVED, f_raft_overhead_perf),
+        (ExperimentType.CROSS_EXP_DERIVED, f_parallaft_overhead_perf, Statistic.AVERAGE),
+        (ExperimentType.CROSS_EXP_DERIVED, f_raft_overhead_perf, Statistic.AVERAGE),
     ],
     "energy_overhead_parallaft_vs_raft": [
-        (ExperimentType.CROSS_EXP_DERIVED, f_parallaft_overhead_energy),
-        (ExperimentType.CROSS_EXP_DERIVED, f_raft_overhead_energy),
+        (ExperimentType.CROSS_EXP_DERIVED, f_parallaft_overhead_energy, Statistic.AVERAGE),
+        (ExperimentType.CROSS_EXP_DERIVED, f_raft_overhead_energy, Statistic.AVERAGE),
     ],
     "parallaft_performance_overhead_breakdown": [
-        (ExperimentType.CROSS_EXP_DERIVED, f_parallaft_overhead_perf_fork_and_cow),
+        (ExperimentType.CROSS_EXP_DERIVED, f_parallaft_overhead_perf_fork_and_cow, Statistic.AVERAGE),
         (
             ExperimentType.CROSS_EXP_DERIVED,
             f_parallaft_overhead_perf_resource_contention,
+            Statistic.AVERAGE
         ),
-        (ExperimentType.CROSS_EXP_DERIVED, f_parallaft_overhead_perf_last_checker_sync),
-        (ExperimentType.CROSS_EXP_DERIVED, f_parallaft_overhead_perf_runtime_work),
+        (ExperimentType.CROSS_EXP_DERIVED, f_parallaft_overhead_perf_last_checker_sync, Statistic.AVERAGE),
+        (ExperimentType.CROSS_EXP_DERIVED, f_parallaft_overhead_perf_runtime_work, Statistic.AVERAGE),
     ],
 }
 
@@ -409,7 +429,7 @@ def main():
     parser.add_argument("--geomean", action="store_true")
 
     for ty in EXPERIMENT_TYPE_LIST:
-        parser.add_argument(f"--{ty.value}")
+        parser.add_argument(f"--{ty.value}", action="append")
 
     args = parser.parse_args()
 
@@ -418,21 +438,28 @@ def main():
     for f in args.fields:
         if f in FIELD_GROUPS:
             fields.extend(FIELD_GROUPS[f])
-        elif f in CROSS_EXP_DERIVED_FIELD_LIST_DICT:
-            fields.append(
-                (ExperimentType.CROSS_EXP_DERIVED, CROSS_EXP_DERIVED_FIELD_LIST_DICT[f])
-            )
         else:
             try:
-                exp_type, field_name = f.split(":", 2)
+                spec = f.split(":", 3)
+                if len(spec) == 2:
+                    if spec[0] in CROSS_EXP_DERIVED_FIELD_LIST_DICT:
+                        fields.append(
+                            (ExperimentType.CROSS_EXP_DERIVED, CROSS_EXP_DERIVED_FIELD_LIST_DICT[f], Statistic(spec[1]))
+                        )
+                        continue
+                    else:
+                        exp_type, field_name = spec
+                        stat_ty = Statistic.AVERAGE
+                else:
+                    exp_type, field_name, stat_ty = spec
             except:
                 raise ValueError(
-                    f"Invalid field specification: {f}, expecting <exp_type>:<field_name> or <derived_field_name> or <field_group_name>"
+                    f"Invalid field specification: {f}, expecting <exp_type>:<field_name>[:<statistic>] or <derived_field_name> or <field_group_name>"
                 )
 
             exp_type = ExperimentType(exp_type)
             if field_name in ALL_FIELD_DICT:
-                fields.append((exp_type, ALL_FIELD_DICT[field_name]))
+                fields.append((exp_type, ALL_FIELD_DICT[field_name], Statistic(stat_ty)))
             else:
                 raise ValueError(f"Unknown field: {field_name}")
 
@@ -440,9 +467,9 @@ def main():
 
     experiment_dirs = {}
     for ty in EXPERIMENT_TYPE_LIST:
-        dir_name = getattr(args, ty.value)
-        if dir_name is not None:
-            experiment_dirs[ty] = dir_name
+        dir_names = getattr(args, ty.value)
+        if dir_names:
+            experiment_dirs[ty] = dir_names
 
     if len(experiment_dirs) == 0:
         print("No experiment directories are specified", file=sys.stderr)
@@ -451,27 +478,38 @@ def main():
     for benchmark in BENCHMARKS:
         exp_stats = OrderedDict()
 
-        for exp_type, dir_name in experiment_dirs.items():
-            filenames = [
-                glob(
-                    f"{dir_name}/result/{sub_run_hash}-{benchmark.filename}.releval*.stats.txt"
-                )
-                for sub_run_hash in benchmark.sub_run_hashes
-            ]
+        for exp_type, dir_names in experiment_dirs.items():
+            exp_fields = set()
+            for i, dir_name in enumerate(dir_names):
+                filenames = [
+                    glob(
+                        f"{dir_name}/result/{sub_run_hash}-{benchmark.filename}.releval*.stats.txt"
+                    )
+                    for sub_run_hash in benchmark.sub_run_hashes
+                ]
 
-            filenames = [
-                filename[0] if len(filename) > 0 else None for filename in filenames
-            ]
+                filenames = [
+                    filename[0] if len(filename) > 0 else None for filename in filenames
+                ]
 
-            if None in filenames:
-                stats = OrderedDict()
-            else:
-                stats = sum_stats_file(filenames)
-                calculate_derived_fields(stats)
+                if None in filenames:
+                    stats = OrderedDict()
+                else:
+                    stats = sum_stats_file(filenames)
+                    calculate_derived_fields(stats)
 
-            exp_stats.update(with_experiment_type(exp_type, stats))
-
-        calculate_cross_exp_derived_fields(exp_stats)
+                exp_fields.update(stats.keys())
+                exp_stats.update(with_experiment_id_and_type(i, exp_type, stats))
+            
+            for s in Statistic.__members__.values():
+                for f in exp_fields:
+                    try:
+                        exp_stats[(exp_type, f, s)] = s.calculate([exp_stats[(exp_type, f, i)] for i in range(len(dir_names))])
+                    except:
+                        pass
+        
+        for s in Statistic.__members__.values():
+            calculate_cross_exp_derived_fields(exp_stats, s)
 
         if args.no_bench_number:
             _, benchmark_name = benchmark.name.split(".", 2)
@@ -480,7 +518,7 @@ def main():
 
         out.append(
             [benchmark_name]
-            + [exp_stats.get((e, f.name), float("nan")) for e, f in fields]
+            + [exp_stats.get((e, f.name, s), float("nan")) for e, f, s in fields]
         )
 
     if args.geomean:
