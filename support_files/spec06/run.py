@@ -226,6 +226,17 @@ def apply_run_mode(mode: str, runcpu_args: List[str], env: Dict[str, str]):
     except KeyError:
         raise ValueError("Unsupported mode")
 
+def apply_arg(name: str) -> Applier:
+    def inner(
+        name: str,
+        value: str,
+        runcpu_args: List[str],
+        env: Dict[str, str],
+    ):
+        runcpu_args += [f"{name}={value}"]
+
+    return partial(inner, name)
+
 def apply_env(env_name: str, env_formatter: Callable[[T], str] = str) -> Applier:
     def inner(
         name: str,
@@ -251,6 +262,15 @@ EXPERIMENT_OPTION_LIST: List[OptionField] = [
             "base",
             list(RUN_MODES.keys()),
             apply_run_mode,
+        )
+    ),
+    (
+        OPT_DATASET := OptionField(
+            "dataset",
+            str,
+            "ref",
+            ["test", "train", "ref"],
+            apply_arg("--size"),
         )
     ),
     (
@@ -358,6 +378,8 @@ class Metadata:
         flags = ""
         if has_intel_turbo and self.config[OPT_INTEL_NOTURBO.name]:
             flags += "_noturbo"
+
+        flags += f"_{self.config[OPT_DATASET.name]}"
 
         name = f"{mode}{flags}"
 
