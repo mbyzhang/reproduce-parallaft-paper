@@ -145,6 +145,8 @@ def get_defs(**kwargs):
 
 xargs_fixed_interval_slicing = "--slicer fixed-interval -e true"
 xargs_tracker_slicing = "--slicer tracker -e true"
+xargs_tracker_slicing_without_homogeneous = xargs_tracker_slicing + " --tracker-allow-homogeneous false"
+xargs_tracker_slicing_with_homogeneous = xargs_tracker_slicing + " --tracker-allow-homogeneous true"
 xargs_syscall_speculation = "--syscall-speculation true"
 xargs_speculative_reads = "--speculative-reads true"
 xargs_double_spec = "--double-speculation true"
@@ -183,17 +185,39 @@ RUN_MODES = {
         xargs_tracker_slicing,
         xargs_syscall_speculation,
     ]),
-    "parallaft_tracker_specread": get_defs(verb="parallaft", label_suffix="-tracker-specread", parallaft_xargs=[
-        xargs_tracker_slicing,
+    # Parallafter with fixed-interval slicing and basic syscall speculation (no double speculation or read speculation)
+    "parallafte_ss": get_defs(verb="parallaft", label_suffix="er-ss", parallaft_xargs=[
+        xargs_fixed_interval_slicing,
+        xargs_syscall_speculation,
+    ]),
+    # Parallafter with fixed-interval slicing and partial syscall speculation (read speculation only, no double speculation)
+    "parallafter_ssr": get_defs(verb="parallaft", label_suffix="er-ssr", parallaft_xargs=[
+        xargs_fixed_interval_slicing,
         xargs_syscall_speculation,
         xargs_speculative_reads,
     ]),
-    "parallaft_tracker_specread_doublespec": get_defs(verb="parallaft", label_suffix="-tracker-specread-doublespec", parallaft_xargs=[
-        xargs_tracker_slicing,
+    # Parallafter with fixed-interval slicing and full syscall speculation (read + double speculation)
+    "parallafter_ssrd": get_defs(verb="parallaft", label_suffix="er-ssrd", parallaft_xargs=[
+        xargs_fixed_interval_slicing,
         xargs_syscall_speculation,
         xargs_speculative_reads,
         xargs_double_spec,
     ]),
+    # Parallafter with tracker slicing (homogeneous execution disallowed) and full syscall speculation
+    "parallafter_ssrd_tk": get_defs(verb="parallaft", label_suffix="er-ssrd-tk", parallaft_xargs=[
+        xargs_tracker_slicing_without_homogeneous,
+        xargs_syscall_speculation,
+        xargs_speculative_reads,
+        xargs_double_spec,
+    ]),
+    # Parallafter with tracker slicing (homogeneous execution allowed) and full syscall speculation
+    "parallafter_ssrd_tk_hm": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm", parallaft_xargs=[
+        xargs_tracker_slicing_with_homogeneous,
+        xargs_syscall_speculation,
+        xargs_speculative_reads,
+        xargs_double_spec,
+    ]),
+    # TODO: ssrd-tk-hm-pf mode (everything above + prefaulter)
 }
 
 def apply_run_mode(mode: str, runcpu_args: List[str], env: Dict[str, str]):
