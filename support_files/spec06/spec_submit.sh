@@ -192,6 +192,7 @@ parallaft)
   )
 
   PARALLAFT_EXEC=(
+    timeout -k 5s -s TERM 40m
     "$PARALLAFT_BIN"
     "${PARALLAFT_COMMON_ARGS[@]}"
     "${PARALLAFT_XARGS[@]}"
