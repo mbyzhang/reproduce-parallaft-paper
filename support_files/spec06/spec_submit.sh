@@ -100,13 +100,13 @@ function parallaft_set_checkpoint_period() {
 }
 
 function parallaft_enable_perf_counters() {
-  if [ $(uname -m) != "x86_64" ]; then
-    return
-  fi
+  local perf_counters="instructions,cycles"
 
-  local perf_counters="instructions,cycles,energy-cores,energy-pkg"
-  if [ -n "$RELEVAL_PARALLAFT_COUNT_CACHE_TLB_EVENTS" -a "$RELEVAL_PARALLAFT_COUNT_CACHE_TLB_EVENTS" = "1" ]; then
-    perf_counters="$perf_counters,ll-loads,ll-load-misses,ll-stores,ll-store-misses,dtlb-loads,dtlb-load-misses,dtlb-stores,dtlb-store-misses"
+  if [ $(uname -m) = "x86_64" ]; then
+    perf_counters="$perf_counters,energy-cores,energy-pkg"
+    if [ -n "$RELEVAL_PARALLAFT_COUNT_CACHE_TLB_EVENTS" -a "$RELEVAL_PARALLAFT_COUNT_CACHE_TLB_EVENTS" = "1" ]; then
+      perf_counters="$perf_counters,ll-loads,ll-load-misses,ll-stores,ll-store-misses,dtlb-loads,dtlb-load-misses,dtlb-stores,dtlb-store-misses"
+    fi
   fi
 
   PARALLAFT_COMMON_ARGS+=(
@@ -176,7 +176,7 @@ run)
     taskset -c "$BIG_CPU_SET" "$@"
   ;;
 parallaft)
-  if [ "$RELEVAL_PARALLAFT_NO_LOG" -ne 1 ]; then
+  if [ "${RELEVAL_PARALLAFT_NO_LOG:-1}" -ne 1 ]; then
     export RUST_LOG=info
   fi
 

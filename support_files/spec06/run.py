@@ -135,13 +135,16 @@ class OptionField(NamedTuple, Generic[T]):
                 f"Unexpected value {value} for option {self.name}, expecting one of {self.choices}"
             )
 
-def get_defs(**kwargs):
+def get_defs(env_overrides: Dict[str, str] = {}, **kwargs):
     args = []
     for k, v in kwargs.items():
         if isinstance(v, list):
             v = " ".join(v)
         args += ["--define", f"{k}={v}"]
-    return args
+    return (args, env_overrides)
+
+ENV_CORE_ALLOC = "RELEVAL_PARALLAFT_CORE_ALLOC"
+ENV_CHECKPOINT_PERIOD = "RELEVAL_PARALLAFT_CHECKPOINT_PERIOD"
 
 xargs_fixed_interval_slicing = "--slicer fixed-interval -e true"
 xargs_tracker_slicing = "--slicer tracker -e true"
@@ -152,9 +155,12 @@ xargs_speculative_reads = "--speculative-reads true"
 xargs_double_spec = "--double-speculation true"
 xargs_sample_mem_no_rt = "--sample-memory-usage true"
 xargs_sample_mem = xargs_sample_mem_no_rt + " --memory-sample-includes-rt true"
+xargs_raft_det = "--slicer entire-program --no-state-cmp true --dirty-page-tracker none"
+xargs_tmr = xargs_raft_det + " --redundancy-level 2"
+xargs_raft_ec = " ".join([xargs_fixed_interval_slicing, xargs_syscall_speculation, "--syscall-speculation-allowlist write,writev"])
 
 RUN_MODES = {
-    "base": [],
+    "base": get_defs(),
     "trace_dirty_pages": get_defs(verb="trace-dirty-pages"),
     "sample_ipc": get_defs(verb="sample-ipc"),
     "parallaft": get_defs(verb="parallaft", label_suffix="", parallaft_xargs=xargs_fixed_interval_slicing),
@@ -168,9 +174,7 @@ RUN_MODES = {
     "parallaft_samplemem": get_defs(verb="parallaft", label_suffix="-samplemem", parallaft_xargs=[xargs_sample_mem, xargs_fixed_interval_slicing]),
     "parallaft_nofork_samplemem": get_defs(verb="parallaft", label_suffix="-nofork-samplemem", parallaft_xargs=["--dont-fork true", xargs_sample_mem, xargs_fixed_interval_slicing]),
     "parallaft_raft": get_defs(verb="parallaft", label_suffix="-raft", parallaft_xargs=[
-        "--slicer entire-program",
-        "--no-state-cmp true",
-        "--dirty-page-tracker none",
+        xargs_raft_det,
         xargs_sample_mem_no_rt,
     ]),
     "parallaft_dynslicing": get_defs(verb="parallaft", label_suffix="-dynslicing", parallaft_xargs="--slicer dynamic -e true"),
@@ -184,6 +188,27 @@ RUN_MODES = {
     "parallaft_tracker_syscallspec": get_defs(verb="parallaft", label_suffix="-tracker-syscallspec", parallaft_xargs=[
         xargs_tracker_slicing,
         xargs_syscall_speculation,
+    ]),
+    # Emulation of triple-modular redundancy (TMR)
+    "tmr_emu": get_defs(env_overrides={ENV_CORE_ALLOC: "all-big"}, verb="parallaft", label_suffix="-tmr", parallaft_xargs=[
+        xargs_tmr,
+    ]),
+    "tmr_emu_samplemem": get_defs(env_overrides={ENV_CORE_ALLOC: "all-big"}, verb="parallaft", label_suffix="-tmr-samplemem", parallaft_xargs=[
+        xargs_tmr,
+        xargs_sample_mem_no_rt,
+    ]),
+    "raft_ec": get_defs(env_overrides={ENV_CORE_ALLOC: "all-big", ENV_CHECKPOINT_PERIOD: str(int(1e11))}, verb="parallaft", label_suffix="-raft-ec", parallaft_xargs=[
+        xargs_raft_ec,
+    ]),
+    "raft_ec_samplemem": get_defs(env_overrides={ENV_CORE_ALLOC: "all-big", ENV_CHECKPOINT_PERIOD: str(int(1e11))}, verb="parallaft", label_suffix="-raft-ec-samplemem", parallaft_xargs=[
+        xargs_raft_ec,
+        xargs_sample_mem_no_rt,
+    ]),
+    # Parallafter with synchronous syscall checks
+    "parallafter_naive": get_defs(verb="parallaft", label_suffix="er-naive", parallaft_xargs=[
+        xargs_fixed_interval_slicing,
+        xargs_syscall_speculation,
+        "--disable-speculation true",
     ]),
     # Parallafter with fixed-interval slicing and basic syscall speculation (no double speculation or read speculation)
     "parallafte_ss": get_defs(verb="parallaft", label_suffix="er-ss", parallaft_xargs=[
@@ -217,12 +242,20 @@ RUN_MODES = {
         xargs_speculative_reads,
         xargs_double_spec,
     ]),
-    # TODO: ssrd-tk-hm-pf mode (everything above + prefaulter)
+    "parallafter_ssrd_tk_hm_samplemem": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm-samplemem", parallaft_xargs=[
+        xargs_tracker_slicing_with_homogeneous,
+        xargs_syscall_speculation,
+        xargs_speculative_reads,
+        xargs_double_spec,
+        xargs_sample_mem,
+    ]),
 }
 
-def apply_run_mode(mode: str, runcpu_args: List[str], env: Dict[str, str]):
+def apply_run_mode(mode: str, runcpu_args: List[str], runcpu_env: Dict[str, str]):
     try:
-        runcpu_args += RUN_MODES[mode]
+        args, env = RUN_MODES[mode]
+        runcpu_args += args
+        runcpu_env.update(env)
     except KeyError:
         raise ValueError("Unsupported mode")
 
@@ -256,15 +289,6 @@ def bool_to_str(v: bool) -> str:
 
 EXPERIMENT_OPTION_LIST: List[OptionField] = [
     (
-        OPT_MODE := OptionField(
-            "mode",
-            str,
-            "base",
-            list(RUN_MODES.keys()),
-            apply_run_mode,
-        )
-    ),
-    (
         OPT_DATASET := OptionField(
             "dataset",
             str,
@@ -279,7 +303,7 @@ EXPERIMENT_OPTION_LIST: List[OptionField] = [
             str,
             "hetero",
             ["all-big", "hetero"],
-            apply_env("RELEVAL_PARALLAFT_CORE_ALLOC"),
+            apply_env(ENV_CORE_ALLOC),
         )
     ),
     (
@@ -297,7 +321,7 @@ EXPERIMENT_OPTION_LIST: List[OptionField] = [
             int,
             5_000_000_000,
             None,
-            apply_env("RELEVAL_PARALLAFT_CHECKPOINT_PERIOD"),
+            apply_env(ENV_CHECKPOINT_PERIOD),
         )
     ),
     (
@@ -307,6 +331,15 @@ EXPERIMENT_OPTION_LIST: List[OptionField] = [
             False,
             None,
             apply_env("RELEVAL_PARALLAFT_COUNT_CACHE_TLB_EVENTS", bool_to_str),
+        )
+    ),
+    (
+        OPT_MODE := OptionField(
+            "mode",
+            str,
+            "base",
+            list(RUN_MODES.keys()),
+            apply_run_mode,
         )
     ),
 ]
