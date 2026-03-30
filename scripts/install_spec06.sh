@@ -44,7 +44,7 @@ fi
 
 mkdir -p releval/scripts
 cp "$SPEC_SUPPORT_DIR/releval.cfg" config/
-ln -sf "$SPEC_SUPPORT_DIR/run.py" releval/
-ln -sf "$SPEC_SUPPORT_DIR/spec_submit.sh" releval/scripts/
+ln -sfr "$SPEC_SUPPORT_DIR/run.py" releval/
+ln -sfr "$SPEC_SUPPORT_DIR/spec_submit.sh" releval/scripts/
 
 popd # $SPEC_DIR
