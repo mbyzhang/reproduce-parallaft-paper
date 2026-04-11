@@ -121,7 +121,8 @@ FIELD_LIST = [
     (f_dtlb_load_misses := Field("perf.dtlb_load_misses", int)),
     (f_dtlb_stores := Field("perf.dtlb_stores", int)),
     (f_dtlb_store_misses := Field("perf.dtlb_store_misses", int)),
-    (f_instructions := Field("perf.instructions", int)),
+    (f_main_instructions := Field("perf.main.instructions", int)),
+    (f_main_cycles := Field("perf.main.cycles", int)),
     (f_energy_pkg := Field("perf.energy_pkg", int)),
     (f_energy_cores := Field("perf.energy_cores", int)),
     (f_nr_dirty_pages := Field("dirty_pages.total_dirty_pages", int)),
@@ -202,6 +203,10 @@ DERIVED_FIELD_LIST = [
         "timing.main_cpu_time",
         lambda stats: stats[f_main_user_time.name] + stats[f_main_sys_time.name],
     ),
+    f_main_cpu_freq := DerivedField(
+        "perf.main.cpu_freq",
+        lambda stats: stats[f_main_cycles.name] / (stats[f_main_user_time.name] + stats[f_main_sys_time.name])
+    ),
     f_hwmon_all_energy := DerivedField(
         "hwmon.macsmc_hwmon.all_energy",
         lambda stats: sum(
@@ -219,6 +224,7 @@ class ExperimentType(Enum):
     BASE = "base"
     BASE_WITH_PERF_COUNTERS = "base_perf_counters"
     PARALLAFT = "parallaft"
+    PARALLAFT_REF = "parallaft_ref"
     RAFT = "raft"
     CROSS_EXP_DERIVED = "derived"
 
@@ -227,6 +233,7 @@ EXPERIMENT_TYPE_LIST = [
     ExperimentType.BASE,
     ExperimentType.BASE_WITH_PERF_COUNTERS,
     ExperimentType.PARALLAFT,
+    ExperimentType.PARALLAFT_REF,
     ExperimentType.RAFT,
 ]
 
@@ -438,13 +445,17 @@ def main():
     for f in args.fields:
         if f in FIELD_GROUPS:
             fields.extend(FIELD_GROUPS[f])
+        elif f in CROSS_EXP_DERIVED_FIELD_LIST_DICT:
+            fields.append(
+                (ExperimentType.CROSS_EXP_DERIVED, CROSS_EXP_DERIVED_FIELD_LIST_DICT[f], Statistic.AVERAGE)
+            )
         else:
             try:
                 spec = f.split(":", 3)
                 if len(spec) == 2:
                     if spec[0] in CROSS_EXP_DERIVED_FIELD_LIST_DICT:
                         fields.append(
-                            (ExperimentType.CROSS_EXP_DERIVED, CROSS_EXP_DERIVED_FIELD_LIST_DICT[f], Statistic(spec[1]))
+                            (ExperimentType.CROSS_EXP_DERIVED, CROSS_EXP_DERIVED_FIELD_LIST_DICT[spec[0]], Statistic(spec[1]))
                         )
                         continue
                     else:
@@ -454,7 +465,7 @@ def main():
                     exp_type, field_name, stat_ty = spec
             except:
                 raise ValueError(
-                    f"Invalid field specification: {f}, expecting <exp_type>:<field_name>[:<statistic>] or <derived_field_name> or <field_group_name>"
+                    f"Invalid field specification: {f}, expecting <exp_type>:<field_name>[:<statistic>] or <derived_field_name>[:<statistic>] or <field_group_name>"
                 )
 
             exp_type = ExperimentType(exp_type)

@@ -158,9 +158,13 @@ xargs_sample_mem = xargs_sample_mem_no_rt + " --memory-sample-includes-rt true"
 xargs_raft_det = "--slicer entire-program --no-state-cmp true --dirty-page-tracker none"
 xargs_tmr = xargs_raft_det + " --redundancy-level 2"
 xargs_raft_ec = " ".join([xargs_fixed_interval_slicing, xargs_syscall_speculation, "--syscall-speculation-allowlist write,writev"])
+xargs_l3ca_6_5 = "--main-cache-mask 0x3f --checker-cache-mask 0x7c0"
+xargs_l3ca_perf_ctrs = "--enabled-perf-counters-main instructions,cycles,ll-loads,ll-load-misses,ll-stores,ll-store-misses,cycle-activity-stalls-l3-miss --enabled-perf-counters-checker instructions,cycles,ll-loads,ll-load-misses,ll-stores,ll-store-misses"
+xargs_hugepages = "--env GLIBC_TUNABLES=glibc.malloc.hugetlb=2"
 
 RUN_MODES = {
     "base": get_defs(),
+    "base_hugepages": get_defs(env_overrides={"GLIBC_TUNABLES": "glibc.malloc.hugetlb=2"}, label_suffix="-hugepages"),
     "trace_dirty_pages": get_defs(verb="trace-dirty-pages"),
     "sample_ipc": get_defs(verb="sample-ipc"),
     "parallaft": get_defs(verb="parallaft", label_suffix="", parallaft_xargs=xargs_fixed_interval_slicing),
@@ -188,6 +192,13 @@ RUN_MODES = {
     "parallaft_tracker_syscallspec": get_defs(verb="parallaft", label_suffix="-tracker-syscallspec", parallaft_xargs=[
         xargs_tracker_slicing,
         xargs_syscall_speculation,
+    ]),
+    "parallaft_tracker_l3ca_6_5": get_defs(verb="parallaft", label_suffix="-l3ca", parallaft_xargs=[xargs_tracker_slicing, xargs_l3ca_6_5, xargs_l3ca_perf_ctrs]),
+    "parallaft_tracker_l3ca_6_5_hugepages": get_defs(verb="parallaft", label_suffix="-l3ca-hugepages", parallaft_xargs=[
+        xargs_tracker_slicing,
+        xargs_l3ca_6_5,
+        xargs_l3ca_perf_ctrs,
+        xargs_hugepages
     ]),
     # Emulation of triple-modular redundancy (TMR)
     "tmr_emu": get_defs(env_overrides={ENV_CORE_ALLOC: "all-big"}, verb="parallaft", label_suffix="-tmr", parallaft_xargs=[
@@ -241,6 +252,23 @@ RUN_MODES = {
         xargs_syscall_speculation,
         xargs_speculative_reads,
         xargs_double_spec,
+    ]),
+    # Parallafter with tracker slicing (homogeneous execution allowed), full syscall speculation, and L3 cache allocation
+    "parallafter_ssrd_tk_hm_l3ca": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm-l3ca", parallaft_xargs=[
+        xargs_tracker_slicing_with_homogeneous,
+        xargs_syscall_speculation,
+        xargs_speculative_reads,
+        xargs_double_spec,
+        xargs_l3ca_6_5,
+    ]),
+    # Parallafter with tracker slicing (homogeneous execution allowed), full syscall speculation, L3 cache allocation, and hugepages
+    "parallafter_ssrd_tk_hm_l3ca_hugepages": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm-l3ca-hugepages", parallaft_xargs=[
+        xargs_tracker_slicing_with_homogeneous,
+        xargs_syscall_speculation,
+        xargs_speculative_reads,
+        xargs_double_spec,
+        xargs_l3ca_6_5,
+        xargs_hugepages,
     ]),
     "parallafter_ssrd_tk_hm_samplemem": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm-samplemem", parallaft_xargs=[
         xargs_tracker_slicing_with_homogeneous,

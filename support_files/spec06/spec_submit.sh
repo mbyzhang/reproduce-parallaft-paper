@@ -99,21 +99,6 @@ function parallaft_set_checkpoint_period() {
   PARALLAFT_COMMON_ARGS+=(--checkpoint-period "$checkpoint_period")
 }
 
-function parallaft_enable_perf_counters() {
-  local perf_counters="instructions,cycles"
-
-  if [ $(uname -m) = "x86_64" ]; then
-    perf_counters="$perf_counters,energy-cores,energy-pkg"
-    if [ -n "$RELEVAL_PARALLAFT_COUNT_CACHE_TLB_EVENTS" -a "$RELEVAL_PARALLAFT_COUNT_CACHE_TLB_EVENTS" = "1" ]; then
-      perf_counters="$perf_counters,ll-loads,ll-load-misses,ll-stores,ll-store-misses,dtlb-loads,dtlb-load-misses,dtlb-stores,dtlb-store-misses"
-    fi
-  fi
-
-  PARALLAFT_COMMON_ARGS+=(
-    --enabled-perf-counters "$perf_counters"
-  )
-}
-
 function parallaft_enable_core_dump() {
   local core_dump_dir="${LOG_PREFIX}.cores"
   mkdir -p "$core_dump_dir"
@@ -150,6 +135,14 @@ if [ -n "$RELEVAL_INTEL_NO_TURBO" ]; then
   set_intel_noturbo "$RELEVAL_INTEL_NO_TURBO"
 fi
 
+# reset cache allocation
+if [ $(uname -m) = "x86_64" ]; then
+  export RDT_PROBE_MSR=1
+  L3CA_MASK=`lscpu -C=WAYS -a | tail -n 1 | perl -ne 'printf "0x%x\n", (1<<$_)-1'`
+  CPUS=`cat /sys/devices/system/cpu/possible`
+  pqos -e llc:0=$L3CA_MASK -a cos:0=$CPUS > /dev/null 2> /dev/null || true
+fi
+
 case "$ACTION" in
 strace)
   exec time \
@@ -182,7 +175,6 @@ parallaft)
 
   parallaft_set_cpu_alloc
   parallaft_set_checkpoint_period
-  parallaft_enable_perf_counters
   parallaft_enable_core_dump
   parallaft_enable_hwmon
 
