@@ -556,8 +556,10 @@ def run_experiment(
         (run_result_dir / p.name).symlink_to(p)
 
     run_log_dir = run_dir / "log"
-    (run_log_dir / "spec_stdout.log").write_text(result.stdout)
-    (run_log_dir / "spec_stderr.log").write_text(result.stderr)
+    if result.stdout:
+        (run_log_dir / "spec_stdout.log").write_text(result.stdout)
+    if result.stderr:
+        (run_log_dir / "spec_stderr.log").write_text(result.stderr)
 
     print(f"SPEC result written to: {result.result_paths}")
 
