@@ -146,6 +146,7 @@ def get_defs(env_overrides: Dict[str, str] = {}, **kwargs):
 ENV_CORE_ALLOC = "RELEVAL_PARALLAFT_CORE_ALLOC"
 ENV_CHECKPOINT_PERIOD = "RELEVAL_PARALLAFT_CHECKPOINT_PERIOD"
 
+xargs_perf_ctrs_basic = "--enabled-perf-counters-main instructions,cycles --enabled-perf-counters-checker instructions,cycles"
 xargs_fixed_interval_slicing = "--slicer fixed-interval -e true"
 xargs_tracker_slicing = "--slicer tracker -e true"
 xargs_tracker_slicing_without_homogeneous = xargs_tracker_slicing + " --tracker-allow-homogeneous false"
@@ -221,17 +222,20 @@ RUN_MODES = {
         xargs_fixed_interval_slicing,
         xargs_syscall_speculation,
         "--disable-speculation true",
+        xargs_perf_ctrs_basic,
     ]),
     # Parallafter with fixed-interval slicing and basic syscall speculation (no double speculation or read speculation)
     "parallafte_ss": get_defs(verb="parallaft", label_suffix="er-ss", parallaft_xargs=[
         xargs_fixed_interval_slicing,
         xargs_syscall_speculation,
+        xargs_perf_ctrs_basic,
     ]),
     # Parallafter with fixed-interval slicing and partial syscall speculation (read speculation only, no double speculation)
     "parallafter_ssr": get_defs(verb="parallaft", label_suffix="er-ssr", parallaft_xargs=[
         xargs_fixed_interval_slicing,
         xargs_syscall_speculation,
         xargs_speculative_reads,
+        xargs_perf_ctrs_basic,
     ]),
     # Parallafter with fixed-interval slicing and full syscall speculation (read + double speculation)
     "parallafter_ssrd": get_defs(verb="parallaft", label_suffix="er-ssrd", parallaft_xargs=[
@@ -239,6 +243,7 @@ RUN_MODES = {
         xargs_syscall_speculation,
         xargs_speculative_reads,
         xargs_double_spec,
+        xargs_perf_ctrs_basic,
     ]),
     # Parallafter with tracker slicing (homogeneous execution disallowed) and full syscall speculation
     "parallafter_ssrd_tk": get_defs(verb="parallaft", label_suffix="er-ssrd-tk", parallaft_xargs=[
@@ -246,6 +251,7 @@ RUN_MODES = {
         xargs_syscall_speculation,
         xargs_speculative_reads,
         xargs_double_spec,
+        xargs_perf_ctrs_basic,
     ]),
     # Parallafter with tracker slicing (homogeneous execution allowed) and full syscall speculation
     "parallafter_ssrd_tk_hm": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm", parallaft_xargs=[
@@ -253,6 +259,7 @@ RUN_MODES = {
         xargs_syscall_speculation,
         xargs_speculative_reads,
         xargs_double_spec,
+        xargs_perf_ctrs_basic,
     ]),
     # Parallafter with tracker slicing (homogeneous execution allowed), full syscall speculation, and L3 cache allocation
     "parallafter_ssrd_tk_hm_l3ca": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm-l3ca", parallaft_xargs=[
@@ -261,6 +268,16 @@ RUN_MODES = {
         xargs_speculative_reads,
         xargs_double_spec,
         xargs_l3ca_6_5,
+        xargs_perf_ctrs_basic,
+    ]),
+    # Parallafter with tracker slicing (homogeneous execution allowed), full syscall speculation, and hugepages
+    "parallafter_ssrd_tk_hm_hugepages": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm-hugepages", parallaft_xargs=[
+        xargs_tracker_slicing_with_homogeneous,
+        xargs_syscall_speculation,
+        xargs_speculative_reads,
+        xargs_double_spec,
+        xargs_hugepages,
+        xargs_perf_ctrs_basic,
     ]),
     # Parallafter with tracker slicing (homogeneous execution allowed), full syscall speculation, L3 cache allocation, and hugepages
     "parallafter_ssrd_tk_hm_l3ca_hugepages": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm-l3ca-hugepages", parallaft_xargs=[
@@ -270,6 +287,7 @@ RUN_MODES = {
         xargs_double_spec,
         xargs_l3ca_6_5,
         xargs_hugepages,
+        xargs_perf_ctrs_basic,
     ]),
     "parallafter_ssrd_tk_hm_samplemem": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm-samplemem", parallaft_xargs=[
         xargs_tracker_slicing_with_homogeneous,
@@ -277,6 +295,7 @@ RUN_MODES = {
         xargs_speculative_reads,
         xargs_double_spec,
         xargs_sample_mem,
+        xargs_perf_ctrs_basic,
     ]),
 }
 
