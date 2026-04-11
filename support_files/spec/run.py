@@ -163,6 +163,7 @@ xargs_l3ca_perf_ctrs = "--enabled-perf-counters-main instructions,cycles,ll-load
 xargs_hugepages = "--env GLIBC_TUNABLES=glibc.malloc.hugetlb=2"
 
 RUN_MODES = {
+    "nop": get_defs(verb="nop"),
     "base": get_defs(),
     "base_hugepages": get_defs(env_overrides={"GLIBC_TUNABLES": "glibc.malloc.hugetlb=2"}, label_suffix="-hugepages"),
     "trace_dirty_pages": get_defs(verb="trace-dirty-pages"),

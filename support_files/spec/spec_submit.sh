@@ -144,6 +144,9 @@ if [ $(uname -m) = "x86_64" ]; then
 fi
 
 case "$ACTION" in
+nop)
+  exit 0
+  ;;
 strace)
   exec time \
     -f $'timing.main_user_time=0\ntiming.main_sys_time=0\ntiming.main_wall_time=%e\ntiming.exit_status=%x\n' \
