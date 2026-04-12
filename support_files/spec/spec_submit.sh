@@ -3,11 +3,8 @@
 # Environment variables
 # * RELEVAL_EXP_NAME
 # * RELEVAL_PARALLAFT_CORE_ALLOC
-# * RELEVAL_PARALLAFT_NO_LOG
 # * RELEVAL_PARALLAFT_CHECKPOINT_PERIOD
-# * RELEVAL_PARALLAFT_COUNT_CACHE_TLB_EVENTS
 # * RELEVAL_INTEL_NOTURBO
-# * [todo] RELEVAL_INTEL_L3CA
 
 set -e
 
@@ -25,13 +22,13 @@ ACTION="$1"
 shift
 
 function usage {
-  echo "usage: $0 {strace|trace-dirty-pages|sample-ipc|run|parallaft} [PARALLAFT_XARGS...] -- PROGRAM"
+  echo "usage: $0 {strace|trace-dirty-pages|sample-ipc|run|parallaft} -- PROGRAM"
 }
 
 PARALLAFT_BIN=parallaft
 PARALLAFT_UTILS_BIN=parallaft-utils
 
-PARALLAFT_XARGS=()
+PARALLAFT_XARGS=${RELEVAL_PARALLAFT_XARGS:-}
 PARALLAFT_COMMON_ARGS=()
 
 while [[ $# -gt 0 ]]; do
@@ -41,7 +38,6 @@ while [[ $# -gt 0 ]]; do
     break
     ;;
   *)
-    PARALLAFT_XARGS+=("$1")
     shift
     ;;
   esac
@@ -172,10 +168,6 @@ run)
     taskset -c "$BIG_CPU_SET" "$@"
   ;;
 parallaft)
-  if [ "${RELEVAL_PARALLAFT_NO_LOG:-1}" -ne 1 ]; then
-    export RUST_LOG=info
-  fi
-
   parallaft_set_cpu_alloc
   parallaft_set_checkpoint_period
   parallaft_enable_core_dump
@@ -187,10 +179,10 @@ parallaft)
   )
 
   PARALLAFT_EXEC=(
-    timeout -k 5s -s TERM 40m
+    timeout -k 5s -s TERM 1h
     "$PARALLAFT_BIN"
     "${PARALLAFT_COMMON_ARGS[@]}"
-    "${PARALLAFT_XARGS[@]}"
+    $PARALLAFT_XARGS
     --
     "$@"
   )

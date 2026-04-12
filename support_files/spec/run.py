@@ -7,6 +7,7 @@ from typing import (
     List,
     Callable,
     Any,
+    Sequence,
     Tuple,
     Type,
     TypeVar,
@@ -135,12 +136,19 @@ class OptionField(NamedTuple, Generic[T]):
                 f"Unexpected value {value} for option {self.name}, expecting one of {self.choices}"
             )
 
-def get_defs(env_overrides: Dict[str, str] = {}, **kwargs):
+def get_defs(env_overrides: Optional[Dict[str, str]] = None, parallaft_xargs: Sequence[str] | str | None = None, **kwargs):
     args = []
     for k, v in kwargs.items():
         if isinstance(v, list):
             v = " ".join(v)
         args += ["--define", f"{k}={v}"]
+    if env_overrides is None:
+        env_overrides = {}
+    if parallaft_xargs:
+        if isinstance(parallaft_xargs, list):
+            parallaft_xargs = " ".join(parallaft_xargs)
+        env_overrides = env_overrides.copy()
+        env_overrides["RELEVAL_PARALLAFT_XARGS"] = parallaft_xargs
     return (args, env_overrides)
 
 ENV_CORE_ALLOC = "RELEVAL_PARALLAFT_CORE_ALLOC"
@@ -164,81 +172,81 @@ xargs_l3ca_perf_ctrs = "--enabled-perf-counters-main instructions,cycles,ll-load
 xargs_hugepages = "--env GLIBC_TUNABLES=glibc.malloc.hugetlb=2"
 
 RUN_MODES = {
-    "nop": get_defs(verb="nop"),
-    "base": get_defs(),
-    "base_hugepages": get_defs(env_overrides={"GLIBC_TUNABLES": "glibc.malloc.hugetlb=2"}, label_suffix="-hugepages"),
-    "trace_dirty_pages": get_defs(verb="trace-dirty-pages"),
-    "sample_ipc": get_defs(verb="sample-ipc"),
-    "parallaft": get_defs(verb="parallaft", label_suffix="", parallaft_xargs=xargs_fixed_interval_slicing),
-    "parallaft_syscallspec": get_defs(verb="parallaft", label_suffix="", parallaft_xargs=[
+    "nop": dict(verb="nop"),
+    "base": dict(),
+    "base_hugepages": dict(env_overrides={"GLIBC_TUNABLES": "glibc.malloc.hugetlb=2"}, label_suffix="-hugepages"),
+    "trace_dirty_pages": dict(verb="trace-dirty-pages"),
+    "sample_ipc": dict(verb="sample-ipc"),
+    "parallaft": dict(verb="parallaft", label_suffix="", parallaft_xargs=xargs_fixed_interval_slicing),
+    "parallaft_syscallspec": dict(verb="parallaft", label_suffix="", parallaft_xargs=[
         xargs_fixed_interval_slicing,
         xargs_syscall_speculation,
     ]),
-    "parallaft_perfcounters": get_defs(verb="parallaft", label_suffix="", parallaft_xargs=xargs_sample_mem_no_rt),
-    "parallaft_nofork": get_defs(verb="parallaft", label_suffix="-nofork", parallaft_xargs=["--dont-fork true", xargs_fixed_interval_slicing]),
-    "parallaft_nomemcheck": get_defs(verb="parallaft", label_suffix="-nomemcheck", parallaft_xargs=["--no-mem-check true", xargs_fixed_interval_slicing]),
-    "parallaft_samplemem": get_defs(verb="parallaft", label_suffix="-samplemem", parallaft_xargs=[xargs_sample_mem, xargs_fixed_interval_slicing]),
-    "parallaft_nofork_samplemem": get_defs(verb="parallaft", label_suffix="-nofork-samplemem", parallaft_xargs=["--dont-fork true", xargs_sample_mem, xargs_fixed_interval_slicing]),
-    "parallaft_raft": get_defs(verb="parallaft", label_suffix="-raft", parallaft_xargs=[
+    "parallaft_perfcounters": dict(verb="parallaft", label_suffix="", parallaft_xargs=xargs_sample_mem_no_rt),
+    "parallaft_nofork": dict(verb="parallaft", label_suffix="-nofork", parallaft_xargs=["--dont-fork true", xargs_fixed_interval_slicing]),
+    "parallaft_nomemcheck": dict(verb="parallaft", label_suffix="-nomemcheck", parallaft_xargs=["--no-mem-check true", xargs_fixed_interval_slicing]),
+    "parallaft_samplemem": dict(verb="parallaft", label_suffix="-samplemem", parallaft_xargs=[xargs_sample_mem, xargs_fixed_interval_slicing]),
+    "parallaft_nofork_samplemem": dict(verb="parallaft", label_suffix="-nofork-samplemem", parallaft_xargs=["--dont-fork true", xargs_sample_mem, xargs_fixed_interval_slicing]),
+    "parallaft_raft": dict(verb="parallaft", label_suffix="-raft", parallaft_xargs=[
         xargs_raft_det,
         xargs_sample_mem_no_rt,
     ]),
-    "parallaft_dynslicing": get_defs(verb="parallaft", label_suffix="-dynslicing", parallaft_xargs="--slicer dynamic -e true"),
-    "parallaft_dyncpufreq": get_defs(verb="parallaft", label_suffix="-dyncpufreq", parallaft_xargs=[
+    "parallaft_dynslicing": dict(verb="parallaft", label_suffix="-dynslicing", parallaft_xargs="--slicer dynamic -e true", no_fixed_interval_slicing=True),
+    "parallaft_dyncpufreq": dict(verb="parallaft", label_suffix="-dyncpufreq", parallaft_xargs=[
         "--cpu-freq-scaler dynamic",
         xargs_fixed_interval_slicing,
         xargs_sample_mem,
     ]),
-    "parallaft_dyn2": get_defs(verb="parallaft", label_suffix="-dyn2", parallaft_xargs="--slicer dynamic -e true --cpu-freq-scaler dynamic"),
-    "parallaft_tracker_baseline": get_defs(verb="parallaft", label_suffix="-tracker", parallaft_xargs=xargs_tracker_slicing),
-    "parallaft_tracker_syscallspec": get_defs(verb="parallaft", label_suffix="-tracker-syscallspec", parallaft_xargs=[
+    "parallaft_dyn2": dict(verb="parallaft", label_suffix="-dyn2", parallaft_xargs="--slicer dynamic -e true --cpu-freq-scaler dynamic", no_fixed_interval_slicing=True),
+    "parallaft_tracker_baseline": dict(verb="parallaft", label_suffix="-tracker", parallaft_xargs=xargs_tracker_slicing, no_fixed_interval_slicing=True),
+    "parallaft_tracker_syscallspec": dict(verb="parallaft", label_suffix="-tracker-syscallspec", parallaft_xargs=[
         xargs_tracker_slicing,
         xargs_syscall_speculation,
-    ]),
-    "parallaft_tracker_l3ca_6_5": get_defs(verb="parallaft", label_suffix="-l3ca", parallaft_xargs=[xargs_tracker_slicing, xargs_l3ca_6_5, xargs_l3ca_perf_ctrs]),
-    "parallaft_tracker_l3ca_6_5_hugepages": get_defs(verb="parallaft", label_suffix="-l3ca-hugepages", parallaft_xargs=[
+    ], no_fixed_interval_slicing=True),
+    "parallaft_tracker_l3ca_6_5": dict(verb="parallaft", label_suffix="-l3ca", parallaft_xargs=[xargs_tracker_slicing, xargs_l3ca_6_5, xargs_l3ca_perf_ctrs], no_fixed_interval_slicing=True),
+    "parallaft_tracker_l3ca_6_5_hugepages": dict(verb="parallaft", label_suffix="-l3ca-hugepages", parallaft_xargs=[
         xargs_tracker_slicing,
         xargs_l3ca_6_5,
         xargs_l3ca_perf_ctrs,
         xargs_hugepages
-    ]),
+    ], no_fixed_interval_slicing=True),
     # Emulation of triple-modular redundancy (TMR)
-    "tmr_emu": get_defs(env_overrides={ENV_CORE_ALLOC: "all-big"}, verb="parallaft", label_suffix="-tmr", parallaft_xargs=[
+    "tmr_emu": dict(env_overrides={ENV_CORE_ALLOC: "all-big"}, verb="parallaft", label_suffix="-tmr", parallaft_xargs=[
         xargs_tmr,
-    ]),
-    "tmr_emu_samplemem": get_defs(env_overrides={ENV_CORE_ALLOC: "all-big"}, verb="parallaft", label_suffix="-tmr-samplemem", parallaft_xargs=[
+    ], no_fixed_interval_slicing=True),
+    "tmr_emu_samplemem": dict(env_overrides={ENV_CORE_ALLOC: "all-big"}, verb="parallaft", label_suffix="-tmr-samplemem", parallaft_xargs=[
         xargs_tmr,
         xargs_sample_mem_no_rt,
-    ]),
-    "raft_ec": get_defs(env_overrides={ENV_CORE_ALLOC: "all-big", ENV_CHECKPOINT_PERIOD: str(int(1e11))}, verb="parallaft", label_suffix="-raft-ec", parallaft_xargs=[
+    ], no_fixed_interval_slicing=True),
+    "raft_ec": dict(env_overrides={ENV_CORE_ALLOC: "all-big", ENV_CHECKPOINT_PERIOD: str(int(1e11))}, verb="parallaft", label_suffix="-raft-ec", parallaft_xargs=[
         xargs_raft_ec,
-    ]),
-    "raft_ec_samplemem": get_defs(env_overrides={ENV_CORE_ALLOC: "all-big", ENV_CHECKPOINT_PERIOD: str(int(1e11))}, verb="parallaft", label_suffix="-raft-ec-samplemem", parallaft_xargs=[
+    ], no_fixed_interval_slicing=True),
+    "raft_ec_samplemem": dict(env_overrides={ENV_CORE_ALLOC: "all-big", ENV_CHECKPOINT_PERIOD: str(int(1e11))}, verb="parallaft", label_suffix="-raft-ec-samplemem", parallaft_xargs=[
         xargs_raft_ec,
         xargs_sample_mem_no_rt,
-    ]),
+    ], no_fixed_interval_slicing=True),
     # Parallafter with synchronous syscall checks
-    "parallafter_naive": get_defs(verb="parallaft", label_suffix="er-naive", parallaft_xargs=[
+    "parallafter_naive": dict(verb="parallaft", label_suffix="er-naive", parallaft_xargs=[
         xargs_fixed_interval_slicing,
         xargs_syscall_speculation,
         "--disable-speculation true",
         xargs_perf_ctrs_basic,
     ]),
     # Parallafter with fixed-interval slicing and basic syscall speculation (no double speculation or read speculation)
-    "parallafte_ss": get_defs(verb="parallaft", label_suffix="er-ss", parallaft_xargs=[
+    "parallafte_ss": dict(verb="parallaft", label_suffix="er-ss", parallaft_xargs=[
         xargs_fixed_interval_slicing,
         xargs_syscall_speculation,
         xargs_perf_ctrs_basic,
     ]),
     # Parallafter with fixed-interval slicing and partial syscall speculation (read speculation only, no double speculation)
-    "parallafter_ssr": get_defs(verb="parallaft", label_suffix="er-ssr", parallaft_xargs=[
+    "parallafter_ssr": dict(verb="parallaft", label_suffix="er-ssr", parallaft_xargs=[
         xargs_fixed_interval_slicing,
         xargs_syscall_speculation,
         xargs_speculative_reads,
         xargs_perf_ctrs_basic,
     ]),
     # Parallafter with fixed-interval slicing and full syscall speculation (read + double speculation)
-    "parallafter_ssrd": get_defs(verb="parallaft", label_suffix="er-ssrd", parallaft_xargs=[
+    "parallafter_ssrd": dict(verb="parallaft", label_suffix="er-ssrd", parallaft_xargs=[
         xargs_fixed_interval_slicing,
         xargs_syscall_speculation,
         xargs_speculative_reads,
@@ -246,41 +254,41 @@ RUN_MODES = {
         xargs_perf_ctrs_basic,
     ]),
     # Parallafter with tracker slicing (homogeneous execution disallowed) and full syscall speculation
-    "parallafter_ssrd_tk": get_defs(verb="parallaft", label_suffix="er-ssrd-tk", parallaft_xargs=[
+    "parallafter_ssrd_tk": dict(verb="parallaft", label_suffix="er-ssrd-tk", parallaft_xargs=[
         xargs_tracker_slicing_without_homogeneous,
         xargs_syscall_speculation,
         xargs_speculative_reads,
         xargs_double_spec,
         xargs_perf_ctrs_basic,
-    ]),
+    ], no_fixed_interval_slicing=True),
     # Parallafter with tracker slicing (homogeneous execution allowed) and full syscall speculation
-    "parallafter_ssrd_tk_hm": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm", parallaft_xargs=[
+    "parallafter_ssrd_tk_hm": dict(verb="parallaft", label_suffix="er-ssrd-tk-hm", parallaft_xargs=[
         xargs_tracker_slicing_with_homogeneous,
         xargs_syscall_speculation,
         xargs_speculative_reads,
         xargs_double_spec,
         xargs_perf_ctrs_basic,
-    ]),
+    ], no_fixed_interval_slicing=True),
     # Parallafter with tracker slicing (homogeneous execution allowed), full syscall speculation, and L3 cache allocation
-    "parallafter_ssrd_tk_hm_l3ca": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm-l3ca", parallaft_xargs=[
+    "parallafter_ssrd_tk_hm_l3ca": dict(verb="parallaft", label_suffix="er-ssrd-tk-hm-l3ca", parallaft_xargs=[
         xargs_tracker_slicing_with_homogeneous,
         xargs_syscall_speculation,
         xargs_speculative_reads,
         xargs_double_spec,
         xargs_l3ca_6_5,
         xargs_perf_ctrs_basic,
-    ]),
+    ], no_fixed_interval_slicing=True),
     # Parallafter with tracker slicing (homogeneous execution allowed), full syscall speculation, and hugepages
-    "parallafter_ssrd_tk_hm_hugepages": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm-hugepages", parallaft_xargs=[
+    "parallafter_ssrd_tk_hm_hugepages": dict(verb="parallaft", label_suffix="er-ssrd-tk-hm-hugepages", parallaft_xargs=[
         xargs_tracker_slicing_with_homogeneous,
         xargs_syscall_speculation,
         xargs_speculative_reads,
         xargs_double_spec,
         xargs_hugepages,
         xargs_perf_ctrs_basic,
-    ]),
+    ], no_fixed_interval_slicing=True),
     # Parallafter with tracker slicing (homogeneous execution allowed), full syscall speculation, L3 cache allocation, and hugepages
-    "parallafter_ssrd_tk_hm_l3ca_hugepages": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm-l3ca-hugepages", parallaft_xargs=[
+    "parallafter_ssrd_tk_hm_l3ca_hugepages": dict(verb="parallaft", label_suffix="er-ssrd-tk-hm-l3ca-hugepages", parallaft_xargs=[
         xargs_tracker_slicing_with_homogeneous,
         xargs_syscall_speculation,
         xargs_speculative_reads,
@@ -288,20 +296,20 @@ RUN_MODES = {
         xargs_l3ca_6_5,
         xargs_hugepages,
         xargs_perf_ctrs_basic,
-    ]),
-    "parallafter_ssrd_tk_hm_samplemem": get_defs(verb="parallaft", label_suffix="er-ssrd-tk-hm-samplemem", parallaft_xargs=[
+    ], no_fixed_interval_slicing=True),
+    "parallafter_ssrd_tk_hm_samplemem": dict(verb="parallaft", label_suffix="er-ssrd-tk-hm-samplemem", parallaft_xargs=[
         xargs_tracker_slicing_with_homogeneous,
         xargs_syscall_speculation,
         xargs_speculative_reads,
         xargs_double_spec,
         xargs_sample_mem,
         xargs_perf_ctrs_basic,
-    ]),
+    ], no_fixed_interval_slicing=True),
 }
 
 def apply_run_mode(mode: str, runcpu_args: List[str], runcpu_env: Dict[str, str]):
     try:
-        args, env = RUN_MODES[mode]
+        args, env = get_defs(**RUN_MODES[mode])
         runcpu_args += args
         runcpu_env.update(env)
     except KeyError:
@@ -355,12 +363,12 @@ EXPERIMENT_OPTION_LIST: List[OptionField] = [
         )
     ),
     (
-        OPT_PARALLAFT_NO_LOG := OptionField(
-            "parallaft_no_log",
-            bool,
-            True,
+        OPT_PARALLAFT_LOG_LEVEL := OptionField(
+            "parallaft_log_level",
+            str,
+            "error",
             None,
-            apply_env("RELEVAL_PARALLAFT_NO_LOG", bool_to_str),
+            apply_env("RUST_LOG"),
         )
     ),
     (
@@ -429,11 +437,11 @@ class Metadata:
     def cleanup(self):
         mode = self.config[OPT_MODE.name]
 
-        if not mode.startswith("parallaft"):
+        if RUN_MODES[mode].get("verb") != "parallaft":
             options_to_delete = [
                 OPT_PARALLAFT_CHECKPOINT_PERIOD,
                 OPT_PARALLAFT_CORE_ALLOC,
-                OPT_PARALLAFT_NO_LOG,
+                OPT_PARALLAFT_LOG_LEVEL,
                 OPT_PARALLAFT_COUNT_CACHE_TLB_EVENTS,
             ]
 
@@ -464,22 +472,16 @@ class Metadata:
 
         name = f"{mode}{flags}"
 
-        if mode.startswith("parallaft"):
-            if mode in (
-                "parallaft",
-                "parallaft_nofork",
-                "parallaft_nomemcheck",
-                "parallaft_samplemem",
-                "parallaft_nofork_samplemem",
-            ):
+        mode_spec = RUN_MODES[mode]
+        if mode_spec.get("verb") == "parallaft":
+            if not mode_spec.get("no_fixed_interval_slicing", False):
                 name += f"_{self.config[OPT_PARALLAFT_CHECKPOINT_PERIOD.name]}-ipc"
 
             core_alloc = self.config[OPT_PARALLAFT_CORE_ALLOC.name]
             parallaft_ver = self.env["parallaft_ver"]
-            if self.config[OPT_PARALLAFT_NO_LOG.name]:
-                flags += "_nolog"
+            loglevel = self.config[OPT_PARALLAFT_LOG_LEVEL.name]
 
-            name += f"_{core_alloc}_parallaft-{parallaft_ver}"
+            name += f"_{core_alloc}_parallaft-{parallaft_ver}_log{loglevel}"
 
         return name
 
@@ -521,9 +523,9 @@ def run_experiment(
         )
 
         if overwrite:
-            print(f"Previous metadata:\n{metadata_ref.display()}")
             if metadata != metadata_ref:
-                raise RuntimeError(f"Metadata mismatch.")
+                print(f"Previous metadata:\n{metadata_ref.display()}")
+                raise RuntimeError(f"Metadata mismatch from {run_dir}")
         else:
             raise RuntimeError("Experiment already exists")
 
@@ -562,6 +564,7 @@ def run_experiment(
         (run_log_dir / "spec_stderr.log").write_text(result.stderr)
 
     print(f"SPEC result written to: {result.result_paths}")
+    print(f"Experiment results under: {run_dir}")
 
 
 def run_experiment_repeated(

@@ -58,7 +58,6 @@ function run_experiments() {
         if [ "$experiment" = "parallaft" -o "$experiment" = "parallaft_dyncpufreq" -o "$experiment" = "parallaft_syscallspec" ]; then
             REL_RUN_EXTRA_ARGS=(
                 --parallaft_checkpoint_period $PARALLAFT_CHECKPOINT_PERIOD
-                --no-parallaft_no_log
             )
         fi
         "$REL_RUN" --mode $experiment "${REL_RUN_EXTRA_ARGS[@]}" "${BENCHMARKS[@]}" --overwrite --spec-ver "$SPEC_VER" "$@"
