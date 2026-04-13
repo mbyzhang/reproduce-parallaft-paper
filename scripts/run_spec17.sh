@@ -20,6 +20,8 @@ EXTRA_ARGS=(
 
 SPEC_VER=2017
 set -e
+# 627.cam4_s requires large stack size
+ulimit -s 131072
 source "$(dirname "$0")/run_common.sh"
 setup_permissions
 check_memory
