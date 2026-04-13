@@ -73,7 +73,7 @@ def run_spec(
 
     output = subprocess_tee.run(
         runcpu_args,
-        check=True,
+        check=False,
         env=env,
         preexec_fn=lambda: prctl.set_pdeathsig(signal.SIGKILL),  # type: ignore
     )
