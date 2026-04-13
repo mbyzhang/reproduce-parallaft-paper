@@ -97,10 +97,14 @@ function parallaft_set_checkpoint_period() {
 
 function parallaft_enable_core_dump() {
   local core_dump_dir="${LOG_PREFIX}.cores"
+  local seg_dump_dir="${LOG_PREFIX}.segments"
   mkdir -p "$core_dump_dir"
+  mkdir -p "$seg_dump_dir"
   PARALLAFT_COMMON_ARGS+=(
     --core-dump true
     --core-dump-dir "$core_dump_dir"
+    --segment-dump-path "$seg_dump_dir"
+    --segment-dump-on-checker-nonrecoverable-error true
   )
 }
 
@@ -179,7 +183,7 @@ parallaft)
   )
 
   PARALLAFT_EXEC=(
-    timeout -k 5s -s TERM 1h
+    timeout -k 5s -s TERM 6h
     "$PARALLAFT_BIN"
     "${PARALLAFT_COMMON_ARGS[@]}"
     $PARALLAFT_XARGS
