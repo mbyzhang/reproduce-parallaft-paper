@@ -170,6 +170,7 @@ xargs_raft_ec = " ".join([xargs_fixed_interval_slicing, xargs_syscall_speculatio
 xargs_l3ca_6_5 = "--main-cache-mask 0x3f --checker-cache-mask 0x7c0"
 xargs_l3ca_perf_ctrs = "--enabled-perf-counters-main instructions,cycles,ll-loads,ll-load-misses,ll-stores,ll-store-misses,cycle-activity-stalls-l3-miss --enabled-perf-counters-checker instructions,cycles,ll-loads,ll-load-misses,ll-stores,ll-store-misses"
 xargs_hugepages = "--env GLIBC_TUNABLES=glibc.malloc.hugetlb=2"
+xargs_thp = "--env GLIBC_TUNABLES=glibc.malloc.hugetlb=1"
 
 RUN_MODES = {
     "nop": dict(verb="nop"),
@@ -285,6 +286,14 @@ RUN_MODES = {
         xargs_speculative_reads,
         xargs_double_spec,
         xargs_hugepages,
+        xargs_perf_ctrs_basic,
+    ], no_fixed_interval_slicing=True),
+    "parallafter_ssrd_tk_hm_thp": dict(verb="parallaft", label_suffix="er-ssrd-tk-hm-thp", parallaft_xargs=[
+        xargs_tracker_slicing_with_homogeneous,
+        xargs_syscall_speculation,
+        xargs_speculative_reads,
+        xargs_double_spec,
+        xargs_thp,
         xargs_perf_ctrs_basic,
     ], no_fixed_interval_slicing=True),
     # Parallafter with tracker slicing (homogeneous execution allowed), full syscall speculation, L3 cache allocation, and hugepages
