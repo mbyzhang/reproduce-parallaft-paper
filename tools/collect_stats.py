@@ -54,6 +54,28 @@ BENCHMARKS = [
     Benchmark("2006", "fp", "470.lbm", "lbm_base", ["e5f68a"]),
     Benchmark("2006", "fp", "481.wrf", "wrf_base", ["70336d"]),
     Benchmark("2006", "fp", "482.sphinx3", "sphinx_livepretend_base", ["3ab418"]),
+
+    Benchmark("2017", "int", "600.perlbench_s", "perlbench_s_base", ["15c0aa", "4be156", "fcb7e9"]),
+    Benchmark("2017", "int", "602.gcc_s", "sgcc_base", ["17135e", "7cdedb", "c017f3"]),
+    Benchmark("2017", "int", "605.mcf_s", "mcf_s_base", ["eddb77"]),
+    Benchmark("2017", "int", "620.omnetpp_s", "omnetpp_s_base", ["af6cf5"]),
+    Benchmark("2017", "int", "623.xalancbmk_s", "xalancbmk_s_base", ["5be936"]),
+    Benchmark("2017", "int", "625.x264_s", "x264_s_base", ["08617b", "8b6186", "b487f6"]),
+    Benchmark("2017", "int", "631.deepsjeng_s", "deepsjeng_s_base", ["5afa1a"]),
+    Benchmark("2017", "int", "641.leela_s", "leela_s_base", ["9bc045"]),
+    Benchmark("2017", "int", "648.exchange2_s", "exchange2_s_base", ["99e327"]),
+    Benchmark("2017", "int", "657.xz_s", "xz_s_base", ["72a258", "d56567"]),
+
+    Benchmark("2017", "fp", "603.bwaves_s", "speed_bwaves_base", ["3e2194", "da7478"]),
+    Benchmark("2017", "fp", "607.cactuBSSN_s", "cactuBSSN_s_base", ["2d5bca"]),
+    Benchmark("2017", "fp", "619.lbm_s", "lbm_s_base", ["3368e2"]),
+    Benchmark("2017", "fp", "621.wrf_s", "wrf_s_base", ["4b795b"]),
+    Benchmark("2017", "fp", "627.cam4_s", "cam4_s_base", ["c5ec2f"]),
+    Benchmark("2017", "fp", "628.pop2_s", "speed_pop2_base", ["75027c"]),
+    Benchmark("2017", "fp", "638.imagick_s", "imagick_s_base", ["f398c7"]),
+    Benchmark("2017", "fp", "644.nab_s", "nab_s_base", ["237cf2"]),
+    Benchmark("2017", "fp", "649.fotonik3d_s", "fotonik3d_s_base", ["e70412"]),
+    Benchmark("2017", "fp", "654.roms_s", "sroms_base", ["a68f1b"]),
 ]
 
 T = TypeVar("T")
@@ -434,6 +456,7 @@ def main():
     parser.add_argument("--output")
     parser.add_argument("--scale", default=1.0, type=float)
     parser.add_argument("--geomean", action="store_true")
+    parser.add_argument("--spec-ver", default="2006", choices=["2006", "2017"])
 
     for ty in EXPERIMENT_TYPE_LIST:
         parser.add_argument(f"--{ty.value}", action="append")
@@ -487,6 +510,9 @@ def main():
         sys.exit(1)
 
     for benchmark in BENCHMARKS:
+        if benchmark.suite != args.spec_ver:
+            continue
+
         exp_stats = OrderedDict()
 
         for exp_type, dir_names in experiment_dirs.items():
