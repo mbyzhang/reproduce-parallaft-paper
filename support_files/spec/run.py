@@ -183,15 +183,14 @@ RUN_MODES = {
         xargs_fixed_interval_slicing,
         xargs_syscall_speculation,
     ]),
-    "parallaft_perfcounters": dict(verb="parallaft", label_suffix="", parallaft_xargs=xargs_sample_mem_no_rt),
+    "parallaft_perfcounters": dict(verb="parallaft", label_suffix="", parallaft_xargs=xargs_sample_mem_no_rt, no_fixed_interval_slicing=True),
     "parallaft_nofork": dict(verb="parallaft", label_suffix="-nofork", parallaft_xargs=["--dont-fork true", xargs_fixed_interval_slicing]),
     "parallaft_nomemcheck": dict(verb="parallaft", label_suffix="-nomemcheck", parallaft_xargs=["--no-mem-check true", xargs_fixed_interval_slicing]),
     "parallaft_samplemem": dict(verb="parallaft", label_suffix="-samplemem", parallaft_xargs=[xargs_sample_mem, xargs_fixed_interval_slicing]),
     "parallaft_nofork_samplemem": dict(verb="parallaft", label_suffix="-nofork-samplemem", parallaft_xargs=["--dont-fork true", xargs_sample_mem, xargs_fixed_interval_slicing]),
-    "parallaft_raft": dict(verb="parallaft", label_suffix="-raft", parallaft_xargs=[
+    "raft_emu": dict(env_overrides={ENV_CORE_ALLOC: "all-big"}, verb="parallaft", label_suffix="-raft", parallaft_xargs=[
         xargs_raft_det,
-        xargs_sample_mem_no_rt,
-    ]),
+    ], no_fixed_interval_slicing=True),
     "parallaft_dynslicing": dict(verb="parallaft", label_suffix="-dynslicing", parallaft_xargs="--slicer dynamic -e true", no_fixed_interval_slicing=True),
     "parallaft_dyncpufreq": dict(verb="parallaft", label_suffix="-dyncpufreq", parallaft_xargs=[
         "--cpu-freq-scaler dynamic",
@@ -464,7 +463,7 @@ class Metadata:
                 del self.env["parallaft_ver"]
             except:
                 pass
-        elif mode == "parallaft_raft":
+        elif RUN_MODES[mode].get("no_fixed_interval_slicing", False):
             try:
                 del self.config[OPT_PARALLAFT_CHECKPOINT_PERIOD.name]
             except:
@@ -483,7 +482,7 @@ class Metadata:
 
         mode_spec = RUN_MODES[mode]
         if mode_spec.get("verb") == "parallaft":
-            if not mode_spec.get("no_fixed_interval_slicing", False):
+            if OPT_PARALLAFT_CHECKPOINT_PERIOD.name in self.config:
                 name += f"_{self.config[OPT_PARALLAFT_CHECKPOINT_PERIOD.name]}-ipc"
 
             core_alloc = self.config[OPT_PARALLAFT_CORE_ALLOC.name]
