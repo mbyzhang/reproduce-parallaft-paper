@@ -166,7 +166,7 @@ xargs_sample_mem_no_rt = "--sample-memory-usage true"
 xargs_sample_mem = xargs_sample_mem_no_rt + " --memory-sample-includes-rt true"
 xargs_raft_det = "--slicer entire-program --no-state-cmp true --dirty-page-tracker none"
 xargs_tmr = xargs_raft_det + " --redundancy-level 2"
-xargs_raft_ec = " ".join([xargs_fixed_interval_slicing, xargs_syscall_speculation, "--syscall-speculation-allowlist write,writev"])
+xargs_raft_ec = " ".join([xargs_fixed_interval_slicing, xargs_syscall_speculation, "--fixed-interval-slicer-checkpoint-method soon --syscall-speculation-allowlist write,writev"])
 xargs_l3ca_6_5 = "--main-cache-mask 0x3f --checker-cache-mask 0x7c0"
 xargs_l3ca_perf_ctrs = "--enabled-perf-counters-main instructions,cycles,ll-loads,ll-load-misses,ll-stores,ll-store-misses,cycle-activity-stalls-l3-miss --enabled-perf-counters-checker instructions,cycles,ll-loads,ll-load-misses,ll-stores,ll-store-misses"
 xargs_hugepages = "--env GLIBC_TUNABLES=glibc.malloc.hugetlb=2"
