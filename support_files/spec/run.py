@@ -175,7 +175,8 @@ xargs_thp = "--env GLIBC_TUNABLES=glibc.malloc.hugetlb=1"
 RUN_MODES = {
     "nop": dict(verb="nop"),
     "base": dict(),
-    "base_hugepages": dict(env_overrides={"GLIBC_TUNABLES": "glibc.malloc.hugetlb=2"}, label_suffix="-hugepages"),
+    "base_thp-madvise": dict(env_overrides={"GLIBC_TUNABLES": "glibc.malloc.hugetlb=1"}, label_suffix="-thp-madvise"),
+    "base_hugetlbfs": dict(env_overrides={"GLIBC_TUNABLES": "glibc.malloc.hugetlb=2"}, label_suffix="-hugetlbfs"),
     "trace_dirty_pages": dict(verb="trace-dirty-pages"),
     "sample_ipc": dict(verb="sample-ipc"),
     "parallaft": dict(verb="parallaft", label_suffix="", parallaft_xargs=xargs_fixed_interval_slicing),
