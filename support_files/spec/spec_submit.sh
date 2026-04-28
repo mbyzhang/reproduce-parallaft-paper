@@ -108,6 +108,21 @@ function parallaft_enable_core_dump() {
   )
 }
 
+function parallaft_set_rlimit_stack() {
+  # If parallaft is setuid'ed/setcapped, the kernel will always reset the stack
+  # size limit to default instead of inheriting from the parent process. Fix it
+  # by explicitly setting the stack size limit for the child in parallaft, as
+  # some benchmarks (e.g. SPEC17 cam4_s) require a large stack size.
+  local soft_limit_kb=`ulimit -Ss`
+  echo "Setting parallaft stack size limit to $soft_limit_kb KB"
+  if [ "$soft_limit_kb" = "unlimited" ]; then
+    local soft_limit_bytes=unlimited
+  else
+    local soft_limit_bytes=$((soft_limit_kb * 1024))
+  fi
+  PARALLAFT_COMMON_ARGS+=(--rlimit-stack "$soft_limit_bytes")
+}
+
 EXP_DIR="$SPEC/releval/run/$RELEVAL_EXP_NAME"
 LOG_DIR="$EXP_DIR/log"
 RESULT_DIR="$EXP_DIR/result"
@@ -176,6 +191,7 @@ parallaft)
   parallaft_set_checkpoint_period
   parallaft_enable_core_dump
   parallaft_enable_hwmon
+  parallaft_set_rlimit_stack
 
   PARALLAFT_COMMON_ARGS+=(
     --log-output "$LOG_PREFIX.log"
