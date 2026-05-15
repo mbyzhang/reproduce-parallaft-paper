@@ -122,19 +122,20 @@ class DerivedField(NamedTuple, Generic[T]):
 
 
 FIELD_LIST = [
-    (f_main_user_time := Field("timing.main_user_time", float)),
-    (f_main_sys_time := Field("timing.main_sys_time", float)),
-    (f_checker_user_time := Field("timing.checker_user_time", float)),
-    (f_checker_sys_time := Field("timing.checker_sys_time", float)),
-    (f_main_wall_time := Field("timing.main_wall_time", float)),
-    (f_all_wall_time := Field("timing.all_wall_time", float)),
+    (f_main_user_time := Field("time.main.inferior.user", float)),
+    (f_main_sys_time := Field("time.main.inferior.sys", float)),
+    (f_checker_user_time := Field("time.checker.inferior.user", float)),
+    (f_checker_sys_time := Field("time.checker.inferior.sys", float)),
+    (f_main_wall_time := Field("time.main.wall", float)),
+    (f_all_wall_time := Field("time.all.wall", float)),
     (
         f_exit_status := Field(
-            "timing.exit_status", int, 0, max_reducer, lambda x: x == 0
+            "time.exit_status", int, 0, max_reducer, lambda x: x == 0
         )
     ),
     (f_checkpoint_count := Field("counter.checkpoint_count", int)),
     (f_syscall_count := Field("counter.syscall_count", int)),
+    (f_rollback_count := Field("counter.rollback_count", int)),
     (f_llc_loads := Field("perf.llc_loads", int)),
     (f_llc_load_misses := Field("perf.llc_load_misses", int)),
     (f_llc_stores := Field("perf.llc_stores", int)),
@@ -216,6 +217,8 @@ FIELD_LIST = [
         )
     ),
     (f_sysspec_main_syscall_waiting_time := Field("syscall_speculator.main_syscall_waiting_time", float)),
+    (f_tracker_homogeneous_cycles := Field("tracker.homogeneous_cycles", int)),
+    (f_tracker_all_cycles := Field("tracker.all_cycles", float)),
 ]
 
 FIELD_DICT = {f.name: f for f in FIELD_LIST}
